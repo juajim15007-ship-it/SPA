@@ -1,0 +1,13 @@
+create extension if not exists pgcrypto;
+create table if not exists products(id uuid primary key default gen_random_uuid(),name text not null,category text not null,description text default '',duration int not null default 60,price numeric(12,2) not null default 0,image_url text default '',active boolean default true,created_at timestamptz default now());
+create table if not exists appointments(id uuid primary key default gen_random_uuid(),product_id uuid references products(id) on delete set null,name text not null,phone text not null,date date not null,time time not null,notes text default '',status text default 'pendiente',created_at timestamptz default now());
+create table if not exists spa_settings(id int primary key default 1,spa_name text default 'Serenity Spa',whatsapp_number text default '',address text default '',instagram text default '',opening_hours jsonb);
+alter table products enable row level security;alter table appointments enable row level security;alter table spa_settings enable row level security;
+create policy products_public on products for select to anon,authenticated using(active=true);
+create policy products_admin on products for all to authenticated using(true) with check(true);
+create policy appointments_public_insert on appointments for insert to anon,authenticated with check(true);
+create policy appointments_admin on appointments for all to authenticated using(true) with check(true);
+create policy settings_public on spa_settings for select to anon,authenticated using(id=1);
+create policy settings_admin on spa_settings for all to authenticated using(true) with check(true);
+insert into spa_settings(id) values(1) on conflict(id) do nothing;
+insert into products(name,category,description,duration,price) values('Masaje relajante','Masajes','Relajación profunda.',60,85000),('Piedras calientes','Masajes','Terapia de calor.',75,110000),('Limpieza facial profunda','Faciales','Limpieza e hidratación.',60,95000),('Ritual corporal hidratante','Corporales','Exfoliación e hidratación.',75,120000),('Spa de manos y pies','Manos y pies','Cuidado relajante.',45,70000),('Ritual de pareja','Experiencias','Experiencia para dos.',90,180000);

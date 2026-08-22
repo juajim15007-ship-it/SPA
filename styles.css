@@ -1,0 +1,917 @@
+/* =========================================================
+   VARIABLES GLOBALES
+========================================================= */
+
+:root {
+    --ink: #24322d;
+    --muted: #6b7770;
+    --paper: #fffdf8;
+    --deep: #385047;
+    --line: #e1e5dc;
+    --sage: #e2eadf;
+}
+
+
+/* =========================================================
+   RESET Y CONFIGURACIÓN GENERAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   HEADER / NAVEGACIÓN
+========================================================= */
+
+header {
+    height: 78px;
+    padding: 0 7%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    position: sticky;
+    top: 0;
+
+    background: #fffdf8ee;
+    backdrop-filter: blur(10px);
+
+    z-index: 10;
+
+    border-bottom: 1px solid #0000000d;
+}
+
+
+/* Logo */
+
+.brand {
+    font: 24px Georgia;
+}
+
+.brand i,
+h1 i,
+h2 i {
+    color: #718a7c;
+}
+
+
+/* Navegación */
+
+nav {
+    display: flex;
+    gap: 25px;
+    align-items: center;
+}
+
+nav button {
+    border: 0;
+    background: none;
+    color: var(--deep);
+}
+
+
+/* Menú móvil */
+
+#menu {
+    display: none;
+
+    border: 0;
+    background: none;
+
+    font-size: 22px;
+}
+
+
+/* =========================================================
+   HERO / SECCIÓN PRINCIPAL
+========================================================= */
+
+.hero {
+    padding: 90px 9%;
+    min-height: 620px;
+
+    display: grid;
+    grid-template-columns: 1fr 0.8fr;
+    gap: 60px;
+    align-items: center;
+
+    background: linear-gradient(
+        120deg,
+        #f8f2e8,
+        #f7f5ed
+    );
+}
+
+
+/* Texto pequeño */
+
+small {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #7a8a80;
+    font-weight: bold;
+}
+
+
+/* Título principal */
+
+.hero h1 {
+    font: 60px Georgia;
+    margin: 20px 0;
+}
+
+
+/* Descripción */
+
+.hero p {
+    max-width: 560px;
+
+    color: var(--muted);
+
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+
+/* Imagen / arte principal */
+
+.heroart {
+    height: 430px;
+
+    border-radius: 220px 220px 20px 20px;
+
+    background: linear-gradient(
+        145deg,
+        #cfd8c9,
+        #8da38f
+    );
+
+    position: relative;
+}
+
+
+/* Texto sobre el arte */
+
+.heroart span {
+    position: absolute;
+
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+
+    background: #fffdf8e8;
+
+    padding: 15px;
+
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   BOTONES
+========================================================= */
+
+.btn {
+    border: 1px solid var(--line);
+
+    border-radius: 999px;
+
+    padding: 12px 18px;
+
+    background: white;
+    color: var(--ink);
+
+    font-weight: bold;
+}
+
+
+/* Botón principal */
+
+.primary {
+    background: var(--deep);
+    color: white;
+    border-color: var(--deep);
+}
+
+
+/* Botón de ancho completo */
+
+.full {
+    width: 100%;
+}
+
+
+/* =========================================================
+   SECCIÓN DE SERVICIOS
+========================================================= */
+
+.section {
+    padding: 90px 8%;
+}
+
+
+/* Títulos generales */
+
+.section h2,
+.band h2,
+.contact h2,
+.modal h2,
+.admin h2 {
+    font: 45px Georgia;
+    margin: 10px 0 30px;
+}
+
+
+/* =========================================================
+   CATEGORÍAS DE SERVICIOS
+========================================================= */
+
+#cats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    margin: 20px 0;
+}
+
+
+/* Categoría */
+
+.chip {
+    padding: 9px 15px;
+
+    border: 1px solid var(--line);
+    border-radius: 999px;
+
+    background: white;
+}
+
+
+/* Categoría seleccionada */
+
+.chip.active {
+    background: var(--sage);
+    color: var(--deep);
+}
+
+
+/* =========================================================
+   PRODUCTOS / TRATAMIENTOS
+========================================================= */
+
+#products {
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 20px;
+}
+
+
+/* Tarjeta */
+
+.card {
+    border: 1px solid var(--line);
+
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    background: white;
+}
+
+
+/* Imagen */
+
+.pic {
+    height: 170px;
+
+    background: linear-gradient(
+        135deg,
+        #d9e0d4,
+        #a8bba8
+    );
+
+    background-size: cover;
+    background-position: center;
+}
+
+
+/* Contenido de la tarjeta */
+
+.body {
+    padding: 20px;
+}
+
+
+/* Nombre del tratamiento */
+
+.body h3 {
+    font: 22px Georgia;
+    margin: 0;
+}
+
+
+/* Título + precio */
+
+.title {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+
+/* Descripción */
+
+.body p {
+    color: var(--muted);
+
+    line-height: 1.6;
+
+    min-height: 60px;
+}
+
+
+/* Información inferior */
+
+.meta {
+    border-top: 1px solid var(--line);
+
+    padding-top: 12px;
+
+    display: flex;
+    justify-content: space-between;
+
+    font-size: 13px;
+}
+
+
+/* Botón dentro de meta */
+
+.meta button {
+    border: 0;
+    background: none;
+
+    color: var(--deep);
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   SECCIÓN EXPERIENCIA
+========================================================= */
+
+.band {
+    padding: 90px 12%;
+
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 70px;
+
+    background: #e9eee6;
+}
+
+
+.band p {
+    color: var(--muted);
+    line-height: 1.9;
+}
+
+
+/* =========================================================
+   CONTACTO / RESERVAS
+========================================================= */
+
+.contact {
+    padding: 70px 8%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background: #f5efe5;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+footer {
+    padding: 25px 8%;
+
+    font-size: 12px;
+
+    color: #89928d;
+}
+
+
+/* =========================================================
+   OVERLAY / VENTANAS MODALES
+========================================================= */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+
+    background: #17231fbb;
+
+    z-index: 50;
+
+    display: grid;
+    place-items: center;
+
+    padding: 20px;
+}
+
+
+/* Ocultar elementos */
+
+.hidden {
+    display: none !important;
+}
+
+
+/* =========================================================
+   MODAL DE RESERVAS
+========================================================= */
+
+.modal,
+.admin {
+    background: var(--paper);
+
+    border-radius: 20px;
+
+    width: min(680px, 100%);
+
+    max-height: 94vh;
+
+    overflow: auto;
+
+    padding: 30px;
+
+    position: relative;
+}
+
+
+/* =========================================================
+   PANEL ADMINISTRADOR
+========================================================= */
+
+.admin {
+    width: min(1000px, 100%);
+}
+
+
+/* =========================================================
+   BOTÓN CERRAR
+========================================================= */
+
+.close {
+    position: absolute;
+
+    right: 16px;
+    top: 16px;
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--line);
+    border-radius: 50%;
+
+    background: white;
+    color: var(--deep);
+
+    font-size: 25px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    z-index: 20;
+
+    transition:
+        transform .2s ease,
+        background .2s ease;
+}
+
+.close:hover {
+    background: var(--sage);
+    transform: rotate(90deg);
+}
+
+
+/* =========================================================
+   FORMULARIOS
+========================================================= */
+
+.modal label,
+.admin label {
+    display: block;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    margin: 12px 0;
+}
+
+
+.modal input,
+.modal select,
+.modal textarea,
+.admin input,
+.admin textarea {
+    width: 100%;
+
+    padding: 11px;
+
+    border: 1px solid var(--line);
+
+    border-radius: 10px;
+
+    margin-top: 6px;
+}
+
+
+/* =========================================================
+   CAMPOS EN DOS COLUMNAS
+========================================================= */
+
+.grid {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+}
+
+
+/* =========================================================
+   CABECERA DEL CALENDARIO
+========================================================= */
+
+.calHead {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    margin-top: 15px;
+}
+
+
+.calHead button {
+    border: 0;
+
+    background: var(--sage);
+
+    border-radius: 8px;
+
+    width: 35px;
+    height: 35px;
+}
+
+
+/* =========================================================
+   CALENDARIO
+========================================================= */
+
+#calendar {
+    display: grid;
+
+    grid-template-columns: repeat(7, 1fr);
+
+    gap: 5px;
+
+    margin: 10px 0;
+}
+
+
+/* Día y horario */
+
+.day,
+.time {
+    border: 1px solid var(--line);
+
+    background: white;
+
+    border-radius: 8px;
+
+    padding: 9px;
+}
+
+
+/* Día / horario deshabilitado */
+
+.day.disabled,
+.time.busy {
+    opacity: 0.35;
+
+    text-decoration: line-through;
+
+    cursor: not-allowed;
+}
+
+
+/* Día / horario seleccionado */
+
+.day.selected,
+.time.selected {
+    background: var(--deep);
+    color: white;
+}
+
+
+/* =========================================================
+   HORARIOS
+========================================================= */
+
+.times {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 6px;
+
+    margin: 10px 0;
+}
+
+/* =========================================================
+   FILAS DEL ADMINISTRADOR
+========================================================= */
+
+.row {
+    display: flex;
+
+    justify-content: space-between;
+
+    border-top: 1px solid var(--line);
+
+    padding: 15px 0;
+}
+
+
+/* =========================================================
+   PESTAÑAS DEL ADMINISTRADOR
+========================================================= */
+
+.tabs {
+    display: flex;
+
+    gap: 10px;
+
+    border-bottom: 1px solid var(--line);
+
+    margin: 0 -30px;
+
+    padding: 0 30px;
+}
+
+
+/* Pestaña */
+
+.tab {
+    border: 0;
+
+    background: none;
+
+    padding: 14px;
+}
+
+
+/* Pestaña activa */
+
+.tab.active {
+    border-bottom: 2px solid var(--deep);
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   EDITOR DEL ADMINISTRADOR
+========================================================= */
+
+.editor {
+    background: #eef2eb;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    margin: 15px 0;
+}
+
+
+/* =========================================================
+   NOTIFICACIONES / TOAST
+========================================================= */
+
+.toast {
+    position: fixed;
+
+    right: 20px;
+    bottom: 20px;
+
+    background: var(--deep);
+
+    color: white;
+
+    padding: 14px;
+
+    border-radius: 10px;
+
+    z-index: 100;
+}
+
+/* =========================================================
+   HORARIOS DISPONIBLES
+========================================================= */
+
+.times-title {
+    margin-top: 18px;
+    margin-bottom: 10px;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    color: var(--deep);
+}
+
+
+.times {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 8px;
+
+    margin: 10px 0 18px;
+}
+
+
+.time {
+    border: 1px solid var(--line);
+
+    background: white;
+
+    color: var(--deep);
+
+    border-radius: 10px;
+
+    padding: 11px 8px;
+
+    font-weight: bold;
+
+    transition:
+        background .2s ease,
+        color .2s ease,
+        transform .2s ease,
+        border-color .2s ease;
+}
+
+
+.time:hover {
+    background: var(--sage);
+
+    transform: translateY(-1px);
+}
+
+
+.time.selected {
+    background: var(--deep);
+
+    color: white;
+
+    border-color: var(--deep);
+}
+
+
+.time-message {
+    margin: 15px 0;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    background: #eef2eb;
+
+    color: var(--muted);
+
+    text-align: center;
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+/* =========================================================
+   RESPONSIVE - TABLETS
+========================================================= */
+
+@media (max-width: 800px) {
+
+    /* Ocultar navegación */
+    nav {
+        display: none;
+    }
+
+    /* Mostrar menú */
+    #menu {
+        display: block;
+    }
+
+    /* Hero */
+    .hero {
+        grid-template-columns: 1fr;
+    }
+
+    .heroart {
+        height: 300px;
+    }
+
+    /* Productos */
+    #products {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Experiencia */
+    .band {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - MÓVILES
+========================================================= */
+
+@media (max-width: 560px) {
+
+    /* Título principal */
+    .hero h1 {
+        font-size: 48px;
+    }
+
+    /* Sección */
+    .section {
+        padding: 60px 6%;
+    }
+
+    /* Productos */
+    #products {
+        grid-template-columns: 1fr;
+    }
+
+    /* Formulario */
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Contacto */
+    .contact {
+        display: block;
+    }
+
+    /* Administrador */
+    .admin {
+        padding: 22px;
+    }
+}

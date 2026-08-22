@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Serenity Spa</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+    <!-- =========================================================
+         HEADER / NAVEGACIÓN
+    ========================================================== -->
+    <header>
+
+        <!-- Logo -->
+        <a class="brand" href="#inicio">
+            ✦ Serenity <i>Spa</i>
+        </a>
+
+        <!-- Navegación principal -->
+        <nav>
+            <a href="#servicios">Servicios</a>
+            <a href="#experiencia">Experiencia</a>
+            <a href="#contacto">Contacto</a>
+
+            <button id="adminOpen">
+                Administrador
+            </button>
+        </nav>
+
+        <!-- Menú móvil -->
+        <button id="menu">
+            ☰
+        </button>
+
+    </header>
+
+
+    <!-- =========================================================
+         HERO / INICIO
+    ========================================================== -->
+    <section id="inicio" class="hero">
+
+        <!-- Texto principal -->
+        <div>
+
+            <small>
+                BIENESTAR · CALMA · RENOVACIÓN
+            </small>
+
+            <h1>
+                Un espacio para <i>volver a ti.</i>
+            </h1>
+
+            <p>
+                Masajes, rituales y tratamientos diseñados
+                para regalarte un momento de calma.
+            </p>
+
+            <button class="btn primary" id="heroReserve">
+                Reservar cita
+            </button>
+
+        </div>
+
+
+        <!-- Arte / elemento visual -->
+        <div class="heroart">
+
+            <span>
+                ♡ Tu momento empieza aquí
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         SERVICIOS
+    ========================================================== -->
+    <section id="servicios" class="section">
+
+        <small>
+            MENÚ DE BIENESTAR
+        </small>
+
+        <h2>
+            Tratamientos y experiencias
+        </h2>
+
+        <!-- Categorías de servicios -->
+        <div id="cats"></div>
+
+        <!-- Productos / tratamientos -->
+        <div id="products"></div>
+
+    </section>
+
+
+    <!-- =========================================================
+         EXPERIENCIA
+    ========================================================== -->
+    <section id="experiencia" class="band">
+
+        <h2>
+            Más que un tratamiento,
+            <br>
+            <i>un ritual de bienestar.</i>
+        </h2>
+
+        <p>
+            Un espacio pensado para desconectarte de la rutina,
+            respirar y disfrutar de una atención cercana.
+        </p>
+
+    </section>
+
+
+    <!-- =========================================================
+         CONTACTO / RESERVA
+    ========================================================== -->
+    <section id="contacto" class="contact">
+
+        <div>
+
+            <small>
+                RESERVAS
+            </small>
+
+            <h2>
+                ¿Listo para tu momento?
+            </h2>
+
+        </div>
+
+        <button class="btn primary" id="contactReserve">
+            Reservar
+        </button>
+
+    </section>
+
+
+    <!-- =========================================================
+         FOOTER
+    ========================================================== -->
+    <footer>
+
+        © 2026 Serenity Spa · Bienestar para cuerpo y mente
+
+    </footer>
+
+
+    <!-- =========================================================
+         MODAL DE RESERVAS
+    ========================================================== -->
+    <div id="booking" class="overlay hidden">
+
+        <div class="modal">
+
+            <!-- Cerrar modal -->
+            <button class="close" data-close="booking">
+                ×
+            </button>
+
+            <small>
+                RESERVA TU CITA
+            </small>
+
+            <h2>
+                Agenda tu experiencia
+            </h2>
+
+
+            <!-- FORMULARIO DE RESERVA -->
+            <form id="bookingForm">
+
+                <!-- =================================================
+                     TRATAMIENTO
+                ================================================== -->
+                <label>
+                    Tratamiento
+
+                    <select id="bProduct" required>
+                    </select>
+                </label>
+
+
+                <!-- Información del tratamiento -->
+                <div id="info"></div>
+
+
+                <!-- =================================================
+                     CABECERA DEL CALENDARIO
+                ================================================== -->
+                <div class="calHead">
+
+                    <button type="button" id="prev">
+                        ‹
+                    </button>
+
+                    <b id="month"></b>
+
+                    <button type="button" id="next">
+                        ›
+                    </button>
+
+                </div>
+
+
+                <!-- =================================================
+                     CALENDARIO
+                ================================================== -->
+                <div id="calendar"></div>
+
+
+                <!-- =================================================
+                     HORARIOS DISPONIBLES
+                ================================================== -->
+                <div id="times"></div>
+
+
+                <!-- =================================================
+                     DATOS OCULTOS DE FECHA Y HORA
+                ================================================== -->
+                <input
+                    type="hidden"
+                    id="bDate"
+                >
+
+                <input
+                    type="hidden"
+                    id="bTime"
+                >
+
+
+                <!-- =================================================
+                     DATOS DEL CLIENTE
+                ================================================== -->
+                <div class="grid">
+
+                    <label>
+                        Nombre
+
+                        <input
+                            id="bName"
+                            required
+                        >
+                    </label>
+
+
+                    <label>
+                        Teléfono
+
+                        <input
+                            id="bPhone"
+                            required
+                        >
+                    </label>
+
+                </div>
+
+
+                <!-- =================================================
+                     NOTAS
+                ================================================== -->
+                <label>
+                    Notas
+
+                    <textarea id="bNotes"></textarea>
+                </label>
+
+
+                <!-- =================================================
+                     BOTÓN DE RESERVA
+                ================================================== -->
+                <button
+                    class="btn primary full"
+                    type="submit"
+                >
+                    Solicitar reserva
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         MODAL DEL ADMINISTRADOR
+    ========================================================== -->
+    <div id="admin" class="overlay hidden">
+
+        <div class="admin">
+
+            <!-- Cerrar panel -->
+            <button
+                class="close"
+                data-close="admin"
+            >
+                ×
+            </button>
+
+
+            <!-- Contenido generado por JavaScript -->
+            <div id="adminContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         CONFIGURACIÓN DE SUPABASE
+    ========================================================== -->
+    <script src="config.js"></script>
+
+
+    <!-- =========================================================
+         JAVASCRIPT PRINCIPAL
+    ========================================================== -->
+    <script src="app.js"></script>
+
+</body>
+
+</html>
