@@ -15,7 +15,7 @@ let db = null;
 let products = [];
 
 let settings = {
-    spa_name: "Serenity Spa",
+    spa_name: "Danu Spa",
     whatsapp_number: "3116917528"
 };
 
@@ -284,6 +284,9 @@ function render() {
             </article>
         `)
         .join("");
+
+    $("#footerText").textContent =
+    `© 2026 ${settings.spa_name} · Bienestar para cuerpo y mente`;
 }
 
 
