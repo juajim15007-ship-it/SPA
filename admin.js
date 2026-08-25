@@ -1,8 +1,6 @@
 /* =========================================================
-   SERENITY SPA
-   PANEL DE ADMINISTRACIÓN
+   SERENITY SPA - ADMINISTRADOR
 ========================================================= */
-
 
 const { createClient } = window.supabase;
 
@@ -12,7 +10,7 @@ let db = null;
 
 let products = [];
 
-let reservations = [];
+let appointments = [];
 
 
 /* =========================================================
@@ -24,12 +22,28 @@ const $ = selector =>
 
 
 /* =========================================================
-   FORMATO DINERO
+   ESCAPAR HTML
 ========================================================= */
 
-function money(value) {
+const esc = value =>
+    String(value ?? "").replace(
+        /[&<>"']/g,
+        m => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[m])
+    );
 
-    return new Intl.NumberFormat(
+
+/* =========================================================
+   DINERO
+========================================================= */
+
+const money = value =>
+    new Intl.NumberFormat(
         "es-CO",
         {
             style: "currency",
@@ -38,74 +52,40 @@ function money(value) {
         }
     ).format(value || 0);
 
-}
-
 
 /* =========================================================
-   ESCAPAR HTML
+   INICIO
 ========================================================= */
 
-function esc(value) {
-
-    return String(value ?? "")
-        .replace(
-            /[&<>"']/g,
-            character => ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#039;"
-            }[character])
-        );
-
-}
-
-
-/* =========================================================
-   INICIALIZACIÓN
-========================================================= */
-
-async function initAdmin() {
+async function init() {
 
     if (
-        !C?.url ||
-        !C?.key ||
-        C.url.includes("TU-PROYECTO")
+        C.url &&
+        C.key &&
+        !C.url.includes("TU-PROYECTO")
     ) {
 
-        showLoginError(
-            "Supabase no está configurado."
+        db = createClient(
+            C.url,
+            C.key
+        );
+
+    }
+
+
+    if (!db) {
+
+        toast(
+            "Supabase no está configurado"
         );
 
         return;
     }
 
 
-    db = createClient(
-        C.url,
-        C.key
-    );
+    bind();
 
-
-    bindEvents();
-
-
-    const session =
-        await db.auth.getSession();
-
-
-    if (
-        session.data.session
-    ) {
-
-        showDashboard();
-
-    } else {
-
-        showLogin();
-
-    }
+    await checkSession();
 
 }
 
@@ -114,7 +94,7 @@ async function initAdmin() {
    EVENTOS
 ========================================================= */
 
-function bindEvents() {
+function bind() {
 
     $("#loginForm").onsubmit =
         login;
@@ -124,27 +104,56 @@ function bindEvents() {
         logout;
 
 
-    $("#refreshReservations").onclick =
-        loadReservations;
+    $("#productsTab").onclick =
+        () => showTab("products");
 
 
-    $("#newService").onclick =
-        () => openServiceEditor();
+    $("#appointmentsTab").onclick =
+        () => showTab("appointments");
 
 
-    document
-        .querySelectorAll(".admin-tab")
-        .forEach(button => {
+    $("#newProduct").onclick =
+        () => openEditor();
 
-            button.onclick = () => {
 
-                switchTab(
-                    button.dataset.tab
-                );
+    $("#refreshAppointments").onclick =
+        loadAppointments;
 
-            };
+}
 
-        });
+
+/* =========================================================
+   SESIÓN
+========================================================= */
+
+async function checkSession() {
+
+    const result =
+        await db.auth.getSession();
+
+
+    if (
+        result.data &&
+        result.data.session
+    ) {
+
+        $("#loginSection")
+            .classList.add("hidden");
+
+        $("#panel")
+            .classList.remove("hidden");
+
+        await loadAll();
+
+    } else {
+
+        $("#loginSection")
+            .classList.remove("hidden");
+
+        $("#panel")
+            .classList.add("hidden");
+
+    }
 
 }
 
@@ -161,7 +170,6 @@ async function login(e) {
     const email =
         $("#email").value.trim();
 
-
     const password =
         $("#password").value;
 
@@ -175,7 +183,7 @@ async function login(e) {
 
     if (result.error) {
 
-        showLoginError(
+        toast(
             result.error.message
         );
 
@@ -183,63 +191,49 @@ async function login(e) {
     }
 
 
-    showDashboard();
+    $("#loginSection")
+        .classList.add("hidden");
+
+    $("#panel")
+        .classList.remove("hidden");
+
+
+    await loadAll();
 
 }
 
 
 /* =========================================================
-   CERRAR SESIÓN
+   LOGOUT
 ========================================================= */
 
 async function logout() {
 
     await db.auth.signOut();
 
-    showLogin();
+    window.location.href =
+        "index.html";
 
 }
 
 
 /* =========================================================
-   MOSTRAR LOGIN
+   CARGAR TODO
 ========================================================= */
 
-function showLogin() {
-
-    $("#loginSection")
-        .classList.remove("hidden");
-
-    $("#dashboard")
-        .classList.add("hidden");
-
-}
-
-
-/* =========================================================
-   MOSTRAR PANEL
-========================================================= */
-
-async function showDashboard() {
-
-    $("#loginSection")
-        .classList.add("hidden");
-
-    $("#dashboard")
-        .classList.remove("hidden");
-
+async function loadAll() {
 
     await loadProducts();
 
-    await loadReservations();
+    await loadAppointments();
 
-    renderStats();
+    updateStats();
 
 }
 
 
 /* =========================================================
-   CARGAR SERVICIOS
+   SERVICIOS
 ========================================================= */
 
 async function loadProducts() {
@@ -270,18 +264,493 @@ async function loadProducts() {
         result.data || [];
 
 
-    renderServices();
+    renderProducts();
 
-    renderStats();
+    updateStats();
 
 }
 
 
 /* =========================================================
-   CARGAR RESERVAS
+   RENDER SERVICIOS
 ========================================================= */
 
-async function loadReservations() {
+function renderProducts() {
+
+    const container =
+        $("#productsList");
+
+
+    if (!products.length) {
+
+        container.innerHTML = `
+            <div class="empty">
+                No hay servicios registrados.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        products
+            .map(product => `
+
+                <article class="productRow">
+
+                    <div class="productImage">
+
+                        ${
+                            product.image_url
+                                ? `
+                                    <img
+                                        src="${esc(product.image_url)}"
+                                        alt="${esc(product.name)}"
+                                    >
+                                `
+                                : "✦"
+                        }
+
+                    </div>
+
+
+                    <div class="productInfo">
+
+                        <h3>
+                            ${esc(product.name)}
+                        </h3>
+
+                        <p>
+                            ${esc(
+                                product.description ||
+                                "Sin descripción"
+                            )}
+                        </p>
+
+                        <div class="productMeta">
+
+                            <span>
+                                ${esc(product.category)}
+                            </span>
+
+                            <span>
+                                ${product.duration} min
+                            </span>
+
+                            <strong>
+                                ${money(product.price)}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="productActions">
+
+                        <button
+                            class="secondaryBtn"
+                            data-edit-product="${product.id}"
+                        >
+                            ✎ Editar
+                        </button>
+
+                        <button
+                            class="dangerBtn"
+                            data-delete-product="${product.id}"
+                        >
+                            🗑 Eliminar
+                        </button>
+
+                    </div>
+
+                </article>
+
+            `)
+            .join("");
+
+
+    document
+        .querySelectorAll(
+            "[data-edit-product]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                const product =
+                    products.find(
+                        p =>
+                            String(p.id) ===
+                            String(
+                                button.dataset
+                                    .editProduct
+                            )
+                    );
+
+                openEditor(product);
+
+            };
+
+        });
+
+
+    document
+        .querySelectorAll(
+            "[data-delete-product]"
+        )
+        .forEach(button => {
+
+            button.onclick =
+                () =>
+                    deleteProduct(
+                        button.dataset
+                            .deleteProduct
+                    );
+
+        });
+
+}
+
+
+/* =========================================================
+   EDITOR
+========================================================= */
+
+function openEditor(product = null) {
+
+    const editor =
+        $("#productEditor");
+
+
+    editor.innerHTML = `
+
+        <div class="editorCard">
+
+            <div class="editorHeader">
+
+                <h3>
+                    ${
+                        product
+                            ? "Editar servicio"
+                            : "Nuevo servicio"
+                    }
+                </h3>
+
+                <button
+                    id="closeEditor"
+                    class="closeEditor"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="formGrid">
+
+                <label>
+                    Nombre
+
+                    <input
+                        id="productName"
+                        value="${esc(
+                            product?.name || ""
+                        )}"
+                        required
+                    >
+                </label>
+
+
+                <label>
+                    Categoría
+
+                    <input
+                        id="productCategory"
+                        value="${esc(
+                            product?.category ||
+                            "Masajes"
+                        )}"
+                        required
+                    >
+                </label>
+
+
+                <label>
+                    Duración en minutos
+
+                    <input
+                        id="productDuration"
+                        type="number"
+                        min="1"
+                        value="${
+                            product?.duration ||
+                            60
+                        }"
+                        required
+                    >
+                </label>
+
+
+                <label>
+                    Precio
+
+                    <input
+                        id="productPrice"
+                        type="number"
+                        min="0"
+                        value="${
+                            product?.price ||
+                            0
+                        }"
+                        required
+                    >
+                </label>
+
+            </div>
+
+
+            <label>
+                Descripción
+
+                <textarea
+                    id="productDescription"
+                    rows="5"
+                    placeholder="Describe el tratamiento..."
+                >${esc(
+                    product?.description || ""
+                )}</textarea>
+
+            </label>
+
+
+            <label>
+                URL de imagen
+
+                <input
+                    id="productImage"
+                    value="${esc(
+                        product?.image_url || ""
+                    )}"
+                    placeholder="https://..."
+                >
+
+            </label>
+
+
+            <div class="editorButtons">
+
+                <button
+                    id="saveProduct"
+                    class="primaryBtn"
+                >
+                    ${
+                        product
+                            ? "Guardar cambios"
+                            : "Crear servicio"
+                    }
+                </button>
+
+                <button
+                    id="cancelEditor"
+                    class="secondaryBtn"
+                >
+                    Cancelar
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    $("#closeEditor").onclick =
+        closeEditor;
+
+
+    $("#cancelEditor").onclick =
+        closeEditor;
+
+
+    $("#saveProduct").onclick =
+        () => saveProduct(product);
+
+}
+
+
+/* =========================================================
+   CERRAR EDITOR
+========================================================= */
+
+function closeEditor() {
+
+    $("#productEditor")
+        .innerHTML = "";
+
+}
+
+
+/* =========================================================
+   GUARDAR SERVICIO
+========================================================= */
+
+async function saveProduct(product) {
+
+    const body = {
+
+        name:
+            $("#productName")
+                .value
+                .trim(),
+
+        category:
+            $("#productCategory")
+                .value
+                .trim(),
+
+        duration:
+            Number(
+                $("#productDuration")
+                    .value
+            ),
+
+        price:
+            Number(
+                $("#productPrice")
+                    .value
+            ),
+
+        description:
+            $("#productDescription")
+                .value
+                .trim(),
+
+        image_url:
+            $("#productImage")
+                .value
+                .trim(),
+
+        active: true
+
+    };
+
+
+    if (!body.name) {
+
+        toast(
+            "Escribe el nombre del servicio"
+        );
+
+        return;
+    }
+
+
+    let result;
+
+
+    if (product) {
+
+        result =
+            await db
+                .from("products")
+                .update(body)
+                .eq("id", product.id);
+
+    } else {
+
+        result =
+            await db
+                .from("products")
+                .insert(body);
+
+    }
+
+
+    if (result.error) {
+
+        toast(
+            result.error.message
+        );
+
+        return;
+    }
+
+
+    toast(
+        product
+            ? "Servicio actualizado"
+            : "Servicio creado"
+    );
+
+
+    closeEditor();
+
+    await loadProducts();
+
+}
+
+
+/* =========================================================
+   ELIMINAR SERVICIO
+========================================================= */
+
+async function deleteProduct(id) {
+
+    const product =
+        products.find(
+            p =>
+                String(p.id) ===
+                String(id)
+        );
+
+
+    if (!product) return;
+
+
+    const confirmDelete =
+        confirm(
+            `¿Eliminar "${product.name}"?`
+        );
+
+
+    if (!confirmDelete)
+        return;
+
+
+    const result =
+        await db
+            .from("products")
+            .delete()
+            .eq("id", id);
+
+
+    if (result.error) {
+
+        toast(
+            result.error.message
+        );
+
+        return;
+    }
+
+
+    toast(
+        "Servicio eliminado"
+    );
+
+
+    await loadProducts();
+
+}
+
+
+/* =========================================================
+   CITAS
+========================================================= */
+
+async function loadAppointments() {
 
     const result =
         await db
@@ -312,10 +781,6 @@ async function loadReservations() {
 
     if (result.error) {
 
-        console.error(
-            result.error
-        );
-
         toast(
             result.error.message
         );
@@ -324,148 +789,32 @@ async function loadReservations() {
     }
 
 
-    reservations =
+    appointments =
         result.data || [];
 
 
-    renderReservations();
+    renderAppointments();
 
-    renderStats();
-
-}
-
-
-/* =========================================================
-   ESTADÍSTICAS
-========================================================= */
-
-function renderStats() {
-
-    const pending =
-        reservations.filter(
-            r =>
-                r.status ===
-                "pendiente"
-        ).length;
-
-
-    const confirmed =
-        reservations.filter(
-            r =>
-                r.status ===
-                "confirmada"
-        ).length;
-
-
-    const cancelled =
-        reservations.filter(
-            r =>
-                r.status ===
-                "cancelada"
-        ).length;
-
-
-    $("#stats").innerHTML = `
-
-        <div class="stat-card">
-
-            <span>
-                📅
-            </span>
-
-            <b>
-                ${reservations.length}
-            </b>
-
-            <small>
-                Total citas
-            </small>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <span>
-                ⏳
-            </span>
-
-            <b>
-                ${pending}
-            </b>
-
-            <small>
-                Pendientes
-            </small>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <span>
-                ✓
-            </span>
-
-            <b>
-                ${confirmed}
-            </b>
-
-            <small>
-                Confirmadas
-            </small>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <span>
-                ×
-            </span>
-
-            <b>
-                ${cancelled}
-            </b>
-
-            <small>
-                Canceladas
-            </small>
-
-        </div>
-
-    `;
+    updateStats();
 
 }
 
 
 /* =========================================================
-   MOSTRAR RESERVAS
+   RENDER CITAS
 ========================================================= */
 
-function renderReservations() {
+function renderAppointments() {
 
     const container =
-        $("#reservationsList");
+        $("#appointmentsList");
 
 
-    if (!reservations.length) {
+    if (!appointments.length) {
 
         container.innerHTML = `
-            <div class="empty-state">
-
-                <div>
-                    📅
-                </div>
-
-                <h3>
-                    No hay citas todavía
-                </h3>
-
-                <p>
-                    Las nuevas reservas aparecerán aquí.
-                </p>
-
+            <div class="empty">
+                No hay citas reservadas.
             </div>
         `;
 
@@ -474,23 +823,192 @@ function renderReservations() {
 
 
     container.innerHTML =
-        reservations
-            .map(renderReservation)
+        appointments
+            .map(a => {
+
+                const product =
+                    a.products || {};
+
+
+                return `
+
+                    <article class="appointmentCard">
+
+                        <div class="appointmentMain">
+
+                            <div class="appointmentDate">
+
+                                <strong>
+                                    ${formatDate(a.date)}
+                                </strong>
+
+                                <span>
+                                    ${formatTime(a.time)}
+                                </span>
+
+                            </div>
+
+
+                            <div class="appointmentInfo">
+
+                                <h3>
+                                    ${esc(a.name)}
+                                </h3>
+
+                                <p class="serviceName">
+                                    ${esc(
+                                        product.name ||
+                                        "Servicio eliminado"
+                                    )}
+                                </p>
+
+                                <p>
+                                    ${esc(
+                                        product.description ||
+                                        "Sin descripción"
+                                    )}
+                                </p>
+
+
+                                <div class="appointmentMeta">
+
+                                    <span>
+                                        📱 ${esc(a.phone)}
+                                    </span>
+
+                                    <span>
+                                        ⏱ ${
+                                            product.duration ||
+                                            "-"
+                                        } min
+                                    </span>
+
+                                    <span>
+                                        ${
+                                            product.price
+                                                ? money(
+                                                    product.price
+                                                )
+                                                : ""
+                                        }
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="statusArea">
+
+                                <span
+                                    class="status ${statusClass(
+                                        a.status
+                                    )}"
+                                >
+                                    ${esc(
+                                        a.status ||
+                                        "pendiente"
+                                    )}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="appointmentActions">
+
+                            <button
+                                class="whatsappBtn"
+                                data-whatsapp="${a.id}"
+                            >
+                                💬 WhatsApp
+                            </button>
+
+
+                            ${
+                                a.status ===
+                                "pendiente"
+                                    ? `
+                                        <button
+                                            class="confirmBtn"
+                                            data-confirm="${a.id}"
+                                        >
+                                            ✓ Confirmar
+                                        </button>
+
+                                        <button
+                                            class="cancelBtn"
+                                            data-cancel="${a.id}"
+                                        >
+                                            × Cancelar
+                                        </button>
+                                    `
+                                    : ""
+                            }
+
+
+                            ${
+                                a.status ===
+                                "confirmada"
+                                    ? `
+                                        <button
+                                            class="dangerBtn"
+                                            data-delete-appointment="${a.id}"
+                                        >
+                                            🗑 Eliminar cita
+                                        </button>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+                    </article>
+
+                `;
+
+            })
             .join("");
+
+
+    /*
+     * WhatsApp
+     */
+
+    document
+        .querySelectorAll(
+            "[data-whatsapp]"
+        )
+        .forEach(button => {
+
+            button.onclick =
+                () =>
+                    sendWhatsApp(
+                        button.dataset
+                            .whatsapp
+                    );
+
+        });
 
 
     /*
      * Confirmar
      */
-    container
-        .querySelectorAll("[data-confirm]")
+
+    document
+        .querySelectorAll(
+            "[data-confirm]"
+        )
         .forEach(button => {
 
-            button.onclick = () =>
-                updateStatus(
-                    button.dataset.confirm,
-                    "confirmada"
-                );
+            button.onclick =
+                () =>
+                    updateAppointment(
+                        button.dataset
+                            .confirm,
+                        "confirmada"
+                    );
 
         });
 
@@ -498,15 +1016,20 @@ function renderReservations() {
     /*
      * Cancelar
      */
-    container
-        .querySelectorAll("[data-cancel]")
+
+    document
+        .querySelectorAll(
+            "[data-cancel]"
+        )
         .forEach(button => {
 
-            button.onclick = () =>
-                updateStatus(
-                    button.dataset.cancel,
-                    "cancelada"
-                );
+            button.onclick =
+                () =>
+                    updateAppointment(
+                        button.dataset
+                            .cancel,
+                        "cancelada"
+                    );
 
         });
 
@@ -514,46 +1037,19 @@ function renderReservations() {
     /*
      * Eliminar confirmada
      */
-    container
+
+    document
         .querySelectorAll(
-            "[data-delete-confirmed]"
+            "[data-delete-appointment]"
         )
         .forEach(button => {
 
-            button.onclick = () =>
-                deleteConfirmed(
-                    button.dataset.deleteConfirmed
-                );
-
-        });
-
-
-    /*
-     * WhatsApp
-     */
-    container
-        .querySelectorAll("[data-whatsapp]")
-        .forEach(button => {
-
-            button.onclick = () =>
-                openWhatsApp(
-                    button.dataset.whatsapp
-                );
-
-        });
-
-
-    /*
-     * WhatsApp para reprogramar
-     */
-    container
-        .querySelectorAll("[data-reschedule]")
-        .forEach(button => {
-
-            button.onclick = () =>
-                openWhatsApp(
-                    button.dataset.reschedule
-                );
+            button.onclick =
+                () =>
+                    deleteAppointment(
+                        button.dataset
+                            .deleteAppointment
+                    );
 
         });
 
@@ -561,282 +1057,21 @@ function renderReservations() {
 
 
 /* =========================================================
-   TARJETA DE RESERVA
+   ACTUALIZAR CITA
 ========================================================= */
 
-function renderReservation(reservation) {
-
-    const product =
-        reservation.products;
-
-
-    const status =
-        reservation.status ||
-        "pendiente";
-
-
-    const whatsappMessage =
-        createWhatsAppMessage(
-            reservation,
-            "confirmar"
-        );
-
-
-    const rescheduleMessage =
-        createWhatsAppMessage(
-            reservation,
-            "reprogramar"
-        );
-
-
-    const statusClass =
-        status
-            .toLowerCase()
-            .replace(
-                "ó",
-                "o"
-            );
-
-
-    return `
-
-        <article
-            class="reservation-card"
-        >
-
-            <div
-                class="reservation-main"
-            >
-
-                <div
-                    class="reservation-date"
-                >
-
-                    <strong>
-                        ${formatDay(
-                            reservation.date
-                        )}
-                    </strong>
-
-                    <span>
-                        ${formatDate(
-                            reservation.date
-                        )}
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="reservation-info"
-                >
-
-                    <div
-                        class="reservation-title"
-                    >
-
-                        <h3>
-                            ${esc(
-                                reservation.name
-                            )}
-                        </h3>
-
-                        <span
-                            class="status ${statusClass}"
-                        >
-                            ${esc(status)}
-                        </span>
-
-                    </div>
-
-
-                    <p>
-                        <strong>
-                            ${esc(
-                                product?.name ||
-                                "Servicio"
-                            )}
-                        </strong>
-                    </p>
-
-
-                    <p class="reservation-details">
-
-                        🕐
-                        ${formatTime(
-                            reservation.time
-                        )}
-
-                        ·
-
-                        ⏱️
-                        ${product?.duration || 60}
-                        min
-
-                        ·
-
-                        💰
-                        ${money(
-                            product?.price
-                        )}
-
-                    </p>
-
-
-                    <p>
-                        📱
-                        ${esc(
-                            reservation.phone
-                        )}
-                    </p>
-
-
-                    ${
-                        product?.description
-                            ? `
-                                <div
-                                    class="reservation-description"
-                                >
-                                    ${esc(
-                                        product.description
-                                    )}
-                                </div>
-                              `
-                            : ""
-                    }
-
-
-                    ${
-                        reservation.notes
-                            ? `
-                                <div
-                                    class="reservation-notes"
-                                >
-                                    <strong>
-                                        Notas:
-                                    </strong>
-
-                                    ${esc(
-                                        reservation.notes
-                                    )}
-                                </div>
-                              `
-                            : ""
-                    }
-
-                </div>
-
-            </div>
-
-
-            <div
-                class="reservation-actions"
-            >
-
-                <button
-                    class="btn whatsapp"
-                    data-whatsapp="${esc(
-                        reservation.id
-                    )}"
-                    type="button"
-                >
-                    💬 WhatsApp
-                </button>
-
-
-                <button
-                    class="btn reschedule"
-                    data-reschedule="${esc(
-                        reservation.id
-                    )}"
-                    type="button"
-                >
-                    🔄 Reprogramar
-                </button>
-
-
-                ${
-                    status === "pendiente"
-                        ? `
-                            <button
-                                class="btn primary"
-                                data-confirm="${esc(
-                                    reservation.id
-                                )}"
-                                type="button"
-                            >
-                                ✓ Confirmar
-                            </button>
-
-                            <button
-                                class="btn danger"
-                                data-cancel="${esc(
-                                    reservation.id
-                                )}"
-                                type="button"
-                            >
-                                Cancelar
-                            </button>
-                          `
-                        : ""
-                }
-
-
-                ${
-                    status === "confirmada"
-                        ? `
-                            <button
-                                class="btn danger"
-                                data-delete-confirmed="${esc(
-                                    reservation.id
-                                )}"
-                                type="button"
-                            >
-                                🗑 Eliminar
-                            </button>
-                          `
-                        : ""
-                }
-
-            </div>
-
-        </article>
-
-    `;
-
-}
-
-
-/* =========================================================
-   CAMBIAR ESTADO
-========================================================= */
-
-async function updateStatus(
+async function updateAppointment(
     id,
-    status
+    newStatus
 ) {
-
-    const confirmation =
-        status === "confirmada"
-            ? "¿Confirmar esta cita?"
-            : "¿Cancelar esta cita?";
-
-
-    if (!confirm(confirmation)) {
-        return;
-    }
-
 
     const result =
         await db
             .from("appointments")
             .update({
-                status
+                status: newStatus
             })
-            .eq(
-                "id",
-                id
-            );
+            .eq("id", id);
 
 
     if (result.error) {
@@ -850,67 +1085,63 @@ async function updateStatus(
 
 
     toast(
-        status === "confirmada"
+        newStatus === "confirmada"
             ? "Cita confirmada"
             : "Cita cancelada"
     );
 
 
-    await loadReservations();
+    await loadAppointments();
 
 }
 
 
 /* =========================================================
-   ELIMINAR CITA CONFIRMADA
+   ELIMINAR CITA
 ========================================================= */
 
-async function deleteConfirmed(id) {
+async function deleteAppointment(id) {
 
-    const reservation =
-        reservations.find(
-            r =>
-                String(r.id) ===
+    const appointment =
+        appointments.find(
+            a =>
+                String(a.id) ===
                 String(id)
         );
 
 
+    if (!appointment)
+        return;
+
+
     if (
-        !reservation ||
-        reservation.status !==
+        appointment.status !==
         "confirmada"
     ) {
 
         toast(
-            "Solo se pueden eliminar citas confirmadas."
+            "Solo se pueden eliminar citas confirmadas"
         );
 
         return;
     }
 
 
-    if (
-        !confirm(
-            "¿Seguro que deseas eliminar esta cita confirmada? Esta acción no se puede deshacer."
-        )
-    ) {
+    const accepted =
+        confirm(
+            `¿Eliminar definitivamente la cita de ${appointment.name}?`
+        );
 
+
+    if (!accepted)
         return;
-    }
 
 
     const result =
         await db
             .from("appointments")
             .delete()
-            .eq(
-                "id",
-                id
-            )
-            .eq(
-                "status",
-                "confirmada"
-            );
+            .eq("id", id);
 
 
     if (result.error) {
@@ -924,133 +1155,97 @@ async function deleteConfirmed(id) {
 
 
     toast(
-        "Cita eliminada correctamente."
+        "Cita eliminada"
     );
 
 
-    await loadReservations();
+    await loadAppointments();
 
 }
 
 
 /* =========================================================
-   MENSAJE WHATSAPP
+   WHATSAPP
 ========================================================= */
 
-function createWhatsAppMessage(
-    reservation,
-    type
-) {
+function sendWhatsApp(id) {
 
-    const product =
-        reservation.products;
-
-
-    const client =
-        reservation.name;
-
-
-    const date =
-        formatDate(
-            reservation.date
-        );
-
-
-    const time =
-        formatTime(
-            reservation.time
-        );
-
-
-    if (
-        type ===
-        "reprogramar"
-    ) {
-
-        return `Hola ${client}, te escribimos de Serenity Spa 🌿
-
-Tenemos registrada tu reserva:
-
-✨ Servicio: ${product?.name || "Servicio"}
-📝 Descripción: ${product?.description || "No disponible"}
-📅 Fecha: ${date}
-🕐 Hora: ${time}
-⏱️ Duración: ${product?.duration || 60} minutos
-
-Por motivos de disponibilidad, necesitamos revisar contigo la posibilidad de reprogramar tu cita.
-
-Por favor indícanos qué otro horario te funciona mejor.
-
-Gracias por confiar en Serenity Spa 💚`;
-
-    }
-
-
-    return `Hola ${client}, te escribimos de Serenity Spa 🌿
-
-Queremos confirmar tu cita:
-
-✨ Servicio: ${product?.name || "Servicio"}
-📝 Descripción: ${product?.description || "No disponible"}
-📅 Fecha: ${date}
-🕐 Hora: ${time}
-⏱️ Duración: ${product?.duration || 60} minutos
-💰 Valor: ${money(product?.price)}
-
-Por favor respóndenos confirmando si puedes asistir en la fecha y hora indicadas.
-
-Si necesitas cambiar el horario, también puedes indicárnoslo por este medio.
-
-¡Gracias por elegir Serenity Spa! 🌿`;
-
-}
-
-
-/* =========================================================
-   ABRIR WHATSAPP
-========================================================= */
-
-function openWhatsApp(id) {
-
-    const reservation =
-        reservations.find(
-            r =>
-                String(r.id) ===
+    const appointment =
+        appointments.find(
+            a =>
+                String(a.id) ===
                 String(id)
         );
 
 
-    if (!reservation) {
+    if (!appointment) {
 
         toast(
-            "No se encontró la reserva."
+            "No se encontró la cita"
         );
 
         return;
     }
 
 
-    const phone =
-        normalizePhone(
-            reservation.phone
-        );
+    const product =
+        appointment.products || {};
+
+
+    /*
+     * Normalizar teléfono
+     *
+     * Si el cliente escribe:
+     * 3111234567
+     *
+     * se convierte en:
+     * 573111234567
+     */
+
+    let phone =
+        String(
+            appointment.phone || ""
+        )
+        .replace(/\D/g, "");
+
+
+    if (
+        phone.length === 10 &&
+        phone.startsWith("3")
+    ) {
+
+        phone =
+            "57" + phone;
+
+    }
 
 
     if (!phone) {
 
         toast(
-            "El teléfono del cliente no es válido."
+            "La cita no tiene teléfono"
         );
 
         return;
     }
 
 
-    const message =
-        createWhatsAppMessage(
-            reservation,
-            "confirmar"
-        );
+    const message = `Hola ${appointment.name}, te escribimos de Serenity Spa 🌿
+
+Queremos confirmar tu cita:
+
+✨ Servicio: ${product.name || "Servicio"}
+📝 Descripción: ${product.description || "Sin descripción"}
+📅 Fecha: ${formatDate(appointment.date)}
+🕐 Hora: ${formatTime(appointment.time)}
+⏱ Duración: ${product.duration || "-"} minutos
+💰 Valor: ${product.price ? money(product.price) : "-"}
+
+Por favor confírmanos si puedes asistir en este horario.
+
+Si necesitas cambiar la fecha o la hora, escríbenos para buscarte otro espacio disponible.
+
+¡Gracias por elegir Serenity Spa! 🌿`;
 
 
     const url =
@@ -1068,59 +1263,13 @@ function openWhatsApp(id) {
 
 
 /* =========================================================
-   NORMALIZAR TELÉFONO
-========================================================= */
-
-function normalizePhone(phone) {
-
-    let value =
-        String(phone || "")
-            .replace(
-                /\D/g,
-                ""
-            );
-
-
-    /*
-     * Colombia:
-     * 3XXXXXXXXX
-     */
-    if (
-        value.length === 10 &&
-        value.startsWith("3")
-    ) {
-
-        value =
-            "57" +
-            value;
-
-    }
-
-
-    /*
-     * Si ya tiene 57
-     */
-    if (
-        value.startsWith("57") &&
-        value.length === 12
-    ) {
-
-        return value;
-
-    }
-
-
-    return value;
-}
-
-
-/* =========================================================
    FORMATO FECHA
 ========================================================= */
 
 function formatDate(date) {
 
-    if (!date) return "";
+    if (!date)
+        return "-";
 
 
     const parts =
@@ -1128,384 +1277,83 @@ function formatDate(date) {
             .split("-");
 
 
-    if (parts.length !== 3) {
+    if (parts.length !== 3)
         return date;
-    }
 
 
-    const [
-        year,
-        month,
-        day
-    ] = parts;
-
-
-    const d =
-        new Date(
-            Number(year),
-            Number(month) - 1,
-            Number(day)
-        );
-
-
-    return new Intl.DateTimeFormat(
-        "es-CO",
-        {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-        }
-    ).format(d);
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
 
 }
 
 
 /* =========================================================
-   DÍA
-========================================================= */
-
-function formatDay(date) {
-
-    if (!date) return "";
-
-
-    return String(date)
-        .split("-")[2];
-
-}
-
-
-/* =========================================================
-   HORA
+   FORMATO HORA
 ========================================================= */
 
 function formatTime(time) {
 
-    return String(time || "")
-        .slice(0, 5);
+    return String(
+        time || ""
+    ).slice(0, 5);
 
 }
 
 
 /* =========================================================
-   SERVICIOS
+   ESTADO
 ========================================================= */
 
-function renderServices() {
-
-    const container =
-        $("#servicesList");
-
-
-    if (!products.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-
-                <h3>
-                    No hay servicios
-                </h3>
-
-            </div>
-        `;
-
-        return;
-    }
-
-
-    container.innerHTML =
-        products
-            .map(
-                product => `
-
-                    <div
-                        class="service-admin-row"
-                    >
-
-                        <div>
-
-                            <strong>
-                                ${esc(
-                                    product.name
-                                )}
-                            </strong>
-
-                            <small>
-
-                                ${esc(
-                                    product.category
-                                )}
-
-                                ·
-
-                                ${product.duration}
-                                min
-
-                                ·
-
-                                ${money(
-                                    product.price
-                                )}
-
-                            </small>
-
-                        </div>
-
-
-                        <div>
-
-                            <button
-                                class="btn"
-                                data-edit-service="${esc(
-                                    product.id
-                                )}"
-                                type="button"
-                            >
-                                ✎ Editar
-                            </button>
-
-
-                            <button
-                                class="btn danger"
-                                data-delete-service="${esc(
-                                    product.id
-                                )}"
-                                type="button"
-                            >
-                                🗑 Eliminar
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                `
-            )
-            .join("");
-
-
-    container
-        .querySelectorAll(
-            "[data-edit-service]"
-        )
-        .forEach(button => {
-
-            button.onclick = () =>
-                openServiceEditor(
-                    button.dataset.editService
-                );
-
-        });
-
-
-    container
-        .querySelectorAll(
-            "[data-delete-service]"
-        )
-        .forEach(button => {
-
-            button.onclick = () =>
-                deleteService(
-                    button.dataset.deleteService
-                );
-
-        });
-
-}
-
-
-/* =========================================================
-   EDITOR DE SERVICIO
-========================================================= */
-
-function openServiceEditor(
-    id = null
-) {
-
-    const product =
-        products.find(
-            p =>
-                String(p.id) ===
-                String(id)
-        );
-
-
-    const name =
-        prompt(
-            "Nombre del servicio:",
-            product?.name || ""
-        );
-
-
-    if (name === null) return;
-
-
-    const category =
-        prompt(
-            "Categoría:",
-            product?.category ||
-            "Masajes"
-        );
-
-
-    if (category === null) return;
-
-
-    const duration =
-        prompt(
-            "Duración en minutos:",
-            product?.duration ||
-            60
-        );
-
-
-    if (duration === null) return;
-
-
-    const price =
-        prompt(
-            "Precio:",
-            product?.price ||
-            0
-        );
-
-
-    if (price === null) return;
-
-
-    saveService({
-        id: product?.id,
-        name,
-        category,
-        duration: Number(duration),
-        price: Number(price),
-        description:
-            product?.description || "",
-        image_url:
-            product?.image_url || ""
-    });
-
-}
-
-
-/* =========================================================
-   GUARDAR SERVICIO
-========================================================= */
-
-async function saveService(data) {
-
-    const body = {
-
-        name:
-            data.name.trim(),
-
-        category:
-            data.category.trim(),
-
-        description:
-            data.description,
-
-        duration:
-            data.duration,
-
-        price:
-            data.price,
-
-        image_url:
-            data.image_url,
-
-        active: true
-
-    };
-
-
-    let result;
-
-
-    if (data.id) {
-
-        result =
-            await db
-                .from("products")
-                .update(body)
-                .eq(
-                    "id",
-                    data.id
-                );
-
-    } else {
-
-        result =
-            await db
-                .from("products")
-                .insert(body);
-
-    }
-
-
-    if (result.error) {
-
-        toast(
-            result.error.message
-        );
-
-        return;
-    }
-
-
-    toast(
-        "Servicio guardado."
-    );
-
-
-    await loadProducts();
-
-}
-
-
-/* =========================================================
-   ELIMINAR SERVICIO
-========================================================= */
-
-async function deleteService(id) {
+function statusClass(status) {
 
     if (
-        !confirm(
-            "¿Eliminar este servicio?"
-        )
-    ) {
-
-        return;
-    }
+        status ===
+        "confirmada"
+    )
+        return "confirmed";
 
 
-    const result =
-        await db
-            .from("products")
-            .delete()
-            .eq(
-                "id",
-                id
-            );
+    if (
+        status ===
+        "cancelada"
+    )
+        return "cancelled";
 
 
-    if (result.error) {
+    return "pending";
 
-        toast(
-            result.error.message
-        );
-
-        return;
-    }
+}
 
 
-    toast(
-        "Servicio eliminado."
-    );
+/* =========================================================
+   ESTADÍSTICAS
+========================================================= */
+
+function updateStats() {
+
+    if ($("#statProducts"))
+        $("#statProducts")
+            .textContent =
+            products.length;
 
 
-    await loadProducts();
+    if ($("#statPending"))
+        $("#statPending")
+            .textContent =
+            appointments.filter(
+                a =>
+                    a.status ===
+                    "pendiente"
+            ).length;
+
+
+    if ($("#statConfirmed"))
+        $("#statConfirmed")
+            .textContent =
+            appointments.filter(
+                a =>
+                    a.status ===
+                    "confirmada"
+            ).length;
 
 }
 
@@ -1514,32 +1362,58 @@ async function deleteService(id) {
    CAMBIAR PESTAÑA
 ========================================================= */
 
-function switchTab(tab) {
+function showTab(tab) {
 
-    document
-        .querySelectorAll(".admin-tab")
-        .forEach(button => {
+    if (
+        tab ===
+        "products"
+    ) {
 
-            button.classList.toggle(
-                "active",
-                button.dataset.tab === tab
+        $("#productsSection")
+            .classList.remove(
+                "hidden"
             );
 
-        });
+        $("#appointmentsSection")
+            .classList.add(
+                "hidden"
+            );
 
+        $("#productsTab")
+            .classList.add(
+                "active"
+            );
 
-    $("#reservasPanel")
-        .classList.toggle(
-            "hidden",
-            tab !== "reservas"
-        );
+        $("#appointmentsTab")
+            .classList.remove(
+                "active"
+            );
 
+    } else {
 
-    $("#serviciosPanel")
-        .classList.toggle(
-            "hidden",
-            tab !== "servicios"
-        );
+        $("#productsSection")
+            .classList.add(
+                "hidden"
+            );
+
+        $("#appointmentsSection")
+            .classList.remove(
+                "hidden"
+            );
+
+        $("#productsTab")
+            .classList.remove(
+                "active"
+            );
+
+        $("#appointmentsTab")
+            .classList.add(
+                "active"
+            );
+
+        loadAppointments();
+
+    }
 
 }
 
@@ -1551,58 +1425,31 @@ function switchTab(tab) {
 function toast(message) {
 
     const element =
-        document.createElement("div");
-
-
-    element.className =
-        "toast";
+        $("#toast");
 
 
     element.textContent =
         message;
 
 
-    $("#toastContainer")
-        .appendChild(element);
-
-
-    setTimeout(
-        () => element.remove(),
-        3500
+    element.classList.remove(
+        "hidden"
     );
 
-}
+
+    clearTimeout(
+        window.toastTimer
+    );
 
 
-/* =========================================================
-   ERROR LOGIN
-========================================================= */
-
-function showLoginError(message) {
-
-    let element =
-        $("#loginError");
-
-
-    if (!element) {
-
-        element =
-            document.createElement("div");
-
-        element.id =
-            "loginError";
-
-        element.className =
-            "login-error";
-
-        $("#loginForm")
-            .prepend(element);
-
-    }
-
-
-    element.textContent =
-        message;
+    window.toastTimer =
+        setTimeout(
+            () =>
+                element.classList.add(
+                    "hidden"
+                ),
+            3500
+        );
 
 }
 
@@ -1611,4 +1458,4 @@ function showLoginError(message) {
    INICIAR
 ========================================================= */
 
-initAdmin();
+init();
