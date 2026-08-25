@@ -1,56 +1,101 @@
 /* =========================================================
-   SERENITY SPA - ADMINISTRADOR
+   DANU SPA
+   PANEL DE ADMINISTRACIÓN
 ========================================================= */
 
-const { createClient } = window.supabase;
+const { createClient } =
+    window.supabase;
 
-const C = window.SERENITY_CONFIG;
+const C =
+    window.SERENITY_CONFIG || {};
 
 let db = null;
 
 let products = [];
 
-let appointments = [];
+let reservations = [];
+
+let currentTab =
+    "products";
 
 
 /* =========================================================
    SELECTOR
 ========================================================= */
 
-const $ = selector =>
-    document.querySelector(selector);
+const $ =
+    selector =>
+        document.querySelector(
+            selector
+        );
 
 
 /* =========================================================
-   ESCAPAR HTML
+   FORMATO MONEDA
 ========================================================= */
 
-const esc = value =>
-    String(value ?? "").replace(
-        /[&<>"']/g,
-        m => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;"
-        }[m])
-    );
+function money(value) {
 
-
-/* =========================================================
-   DINERO
-========================================================= */
-
-const money = value =>
-    new Intl.NumberFormat(
+    return new Intl.NumberFormat(
         "es-CO",
         {
             style: "currency",
             currency: "COP",
             maximumFractionDigits: 0
         }
-    ).format(value || 0);
+    ).format(
+        Number(value) || 0
+    );
+
+}
+
+
+/* =========================================================
+   ESCAPAR HTML
+========================================================= */
+
+function esc(value) {
+
+    return String(value ?? "").replace(
+        /[&<>"']/g,
+        character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[character])
+    );
+
+}
+
+
+/* =========================================================
+   CONEXIÓN
+========================================================= */
+
+function connect() {
+
+    if (
+        C.url &&
+        C.key &&
+        !C.url.includes(
+            "TU-PROYECTO"
+        ) &&
+        !C.key.includes(
+            "TU_CLAVE"
+        )
+    ) {
+
+        db =
+            createClient(
+                C.url,
+                C.key
+            );
+
+    }
+
+}
 
 
 /* =========================================================
@@ -59,101 +104,76 @@ const money = value =>
 
 async function init() {
 
-    if (
-        C.url &&
-        C.key &&
-        !C.url.includes("TU-PROYECTO")
-    ) {
-
-        db = createClient(
-            C.url,
-            C.key
-        );
-
-    }
+    connect();
 
 
     if (!db) {
 
-        toast(
-            "Supabase no está configurado"
+        renderError(
+            "Supabase no está configurado. Revisa config.js."
         );
 
         return;
+
     }
 
 
-    bind();
-
-    await checkSession();
-
-}
-
-
-/* =========================================================
-   EVENTOS
-========================================================= */
-
-function bind() {
-
-    $("#loginForm").onsubmit =
-        login;
-
-
-    $("#logout").onclick =
-        logout;
-
-
-    $("#productsTab").onclick =
-        () => showTab("products");
-
-
-    $("#appointmentsTab").onclick =
-        () => showTab("appointments");
-
-
-    $("#newProduct").onclick =
-        () => openEditor();
-
-
-    $("#refreshAppointments").onclick =
-        loadAppointments;
-
-}
-
-
-/* =========================================================
-   SESIÓN
-========================================================= */
-
-async function checkSession() {
-
-    const result =
+    const session =
         await db.auth.getSession();
 
 
     if (
-        result.data &&
-        result.data.session
+        !session.data.session
     ) {
 
-        $("#loginSection")
-            .classList.add("hidden");
+        renderLogin();
 
-        $("#panel")
-            .classList.remove("hidden");
-
-        await loadAll();
-
-    } else {
-
-        $("#loginSection")
-            .classList.remove("hidden");
-
-        $("#panel")
-            .classList.add("hidden");
+        return;
 
     }
+
+
+    showLogout();
+
+    await renderAdmin(
+        "products"
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR ERROR
+========================================================= */
+
+function renderError(message) {
+
+    $("#adminApp").innerHTML = `
+
+        <div class="login-wrapper">
+
+            <div class="login-card">
+
+                <h1>
+                    Danu SPA
+                </h1>
+
+                <p>
+                    ${esc(message)}
+                </p>
+
+                <a
+                    href="index.html"
+                    class="btn btn-primary"
+                >
+                    Volver al inicio
+                </a>
+
+            </div>
+
+        </div>
+
+    `;
 
 }
 
@@ -162,43 +182,148 @@ async function checkSession() {
    LOGIN
 ========================================================= */
 
-async function login(e) {
+function renderLogin() {
 
-    e.preventDefault();
+    $("#adminApp").innerHTML = `
+
+        <div class="login-wrapper">
+
+            <div class="login-card">
+
+                <small>
+                    ÁREA PRIVADA
+                </small>
+
+                <h1>
+                    Administración
+                </h1>
+
+                <p>
+                    Ingresa con tu cuenta de administrador.
+                </p>
+
+                <form id="loginForm">
+
+                    <div class="form-group">
+
+                        <label>
+                            Correo
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            Contraseña
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        class="btn btn-primary"
+                        type="submit"
+                        style="width:100%"
+                    >
+                        Entrar
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    $("#loginForm")
+        .addEventListener(
+            "submit",
+            login
+        );
+
+}
+
+
+/* =========================================================
+   LOGIN SUPABASE
+========================================================= */
+
+async function login(event) {
+
+    event.preventDefault();
 
 
     const email =
-        $("#email").value.trim();
+        $("#email")
+            .value
+            .trim();
+
 
     const password =
-        $("#password").value;
+        $("#password")
+            .value;
 
 
-    const result =
-        await db.auth.signInWithPassword({
-            email,
-            password
-        });
+    const button =
+        event.submitter;
 
 
-    if (result.error) {
+    button.disabled =
+        true;
+
+    button.textContent =
+        "Ingresando...";
+
+
+    const response =
+        await db.auth
+            .signInWithPassword({
+                email,
+                password
+            });
+
+
+    if (response.error) {
 
         toast(
-            result.error.message
+            "No se pudo iniciar sesión: " +
+            response.error.message
         );
 
+        button.disabled =
+            false;
+
+        button.textContent =
+            "Entrar";
+
         return;
+
     }
 
 
-    $("#loginSection")
-        .classList.add("hidden");
+    showLogout();
 
-    $("#panel")
-        .classList.remove("hidden");
-
-
-    await loadAll();
+    await renderAdmin(
+        "products"
+    );
 
 }
 
@@ -207,27 +332,254 @@ async function login(e) {
    LOGOUT
 ========================================================= */
 
-async function logout() {
+function showLogout() {
 
-    await db.auth.signOut();
+    $("#logout")
+        .classList
+        .remove("hidden");
 
-    window.location.href =
-        "index.html";
+
+    $("#logout")
+        .onclick =
+        async () => {
+
+            await db.auth.signOut();
+
+            window.location.href =
+                "admin.html";
+
+        };
 
 }
 
 
 /* =========================================================
-   CARGAR TODO
+   PANEL
 ========================================================= */
 
-async function loadAll() {
+async function renderAdmin(
+    tab = "products"
+) {
 
-    await loadProducts();
+    currentTab =
+        tab;
 
-    await loadAppointments();
 
-    updateStats();
+    if (
+        tab ===
+        "products"
+    ) {
+
+        await loadProducts();
+
+    }
+
+
+    if (
+        tab ===
+        "reservations"
+    ) {
+
+        await loadReservations();
+
+    }
+
+
+    $("#adminApp").innerHTML = `
+
+        <div class="admin-container">
+
+            <div class="admin-title">
+
+                <div>
+
+                    <small>
+                        DANU SPA
+                    </small>
+
+                    <h1>
+                        Administración
+                    </h1>
+
+                    <p>
+                        Gestiona servicios y reservas.
+                    </p>
+
+                </div>
+
+                ${
+                    tab === "products"
+                        ? `
+                            <button
+                                class="btn btn-primary"
+                                id="newProduct"
+                            >
+                                + Nuevo servicio
+                            </button>
+                        `
+                        : ""
+                }
+
+            </div>
+
+
+            <div class="tabs">
+
+                <button
+                    class="tab ${
+                        tab === "products"
+                            ? "active"
+                            : ""
+                    }"
+                    id="tabProducts"
+                >
+                    Servicios
+                </button>
+
+                <button
+                    class="tab ${
+                        tab === "reservations"
+                            ? "active"
+                            : ""
+                    }"
+                    id="tabReservations"
+                >
+                    Citas reservadas
+                </button>
+
+            </div>
+
+
+            <div id="adminContent"></div>
+
+        </div>
+
+    `;
+
+
+    $("#tabProducts")
+        .onclick =
+        () =>
+            renderAdmin(
+                "products"
+            );
+
+
+    $("#tabReservations")
+        .onclick =
+        () =>
+            renderAdmin(
+                "reservations"
+            );
+
+
+    if (
+        tab === "products"
+    ) {
+
+        $("#newProduct")
+            .onclick =
+            () =>
+                showProductEditor();
+
+        renderProductsAdmin();
+
+    } else {
+
+        renderReservations();
+
+    }
+
+}
+
+
+/* =========================================================
+   CARGAR SERVICIOS
+========================================================= */
+
+async function loadProducts() {
+
+    const response =
+        await db
+            .from("products")
+            .select("*")
+            .order(
+                "created_at",
+                {
+                    ascending:
+                        false
+                }
+            );
+
+
+    if (response.error) {
+
+        toast(
+            response.error.message
+        );
+
+        products = [];
+
+        return;
+
+    }
+
+
+    products =
+        response.data || [];
+
+}
+
+
+/* =========================================================
+   CARGAR RESERVAS
+========================================================= */
+
+async function loadReservations() {
+
+    const response =
+        await db
+            .from("appointments")
+            .select(`
+                *,
+                products (
+                    name,
+                    description,
+                    duration,
+                    price
+                )
+            `)
+            .order(
+                "date",
+                {
+                    ascending:
+                        true
+                }
+            )
+            .order(
+                "time",
+                {
+                    ascending:
+                        true
+                }
+            );
+
+
+    if (response.error) {
+
+        toast(
+            response.error.message
+        );
+
+        reservations = [];
+
+        return;
+
+    }
+
+
+    reservations =
+        response.data || [];
 
 }
 
@@ -236,139 +588,96 @@ async function loadAll() {
    SERVICIOS
 ========================================================= */
 
-async function loadProducts() {
-
-    const result =
-        await db
-            .from("products")
-            .select("*")
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            );
-
-
-    if (result.error) {
-
-        toast(
-            result.error.message
-        );
-
-        return;
-    }
-
-
-    products =
-        result.data || [];
-
-
-    renderProducts();
-
-    updateStats();
-
-}
-
-
-/* =========================================================
-   RENDER SERVICIOS
-========================================================= */
-
-function renderProducts() {
-
-    const container =
-        $("#productsList");
-
+function renderProductsAdmin() {
 
     if (!products.length) {
 
-        container.innerHTML = `
+        $("#adminContent").innerHTML = `
+
             <div class="empty">
-                No hay servicios registrados.
+
+                <h3>
+                    No hay servicios
+                </h3>
+
+                <p>
+                    Crea el primer servicio de Danu SPA.
+                </p>
+
             </div>
+
         `;
 
         return;
+
     }
 
 
-    container.innerHTML =
-        products
-            .map(product => `
+    $("#adminContent").innerHTML = `
 
-                <article class="productRow">
+        <div class="products-list">
 
-                    <div class="productImage">
+            ${
+                products
+                    .map(
+                        product => `
 
-                        ${
-                            product.image_url
-                                ? `
-                                    <img
-                                        src="${esc(product.image_url)}"
-                                        alt="${esc(product.name)}"
+                            <div class="product-row">
+
+                                <div class="product-info">
+
+                                    <strong>
+                                        ${esc(
+                                            product.name
+                                        )}
+                                    </strong>
+
+                                    <small>
+                                        ${esc(
+                                            product.category
+                                        )}
+                                        ·
+                                        ${money(
+                                            product.price
+                                        )}
+                                        ·
+                                        ${
+                                            product.duration
+                                        }
+                                        minutos
+                                    </small>
+
+                                </div>
+
+
+                                <div class="product-actions">
+
+                                    <button
+                                        class="btn"
+                                        data-edit-product="${product.id}"
                                     >
-                                `
-                                : "✦"
-                        }
+                                        ✎ Editar
+                                    </button>
 
-                    </div>
+                                    <button
+                                        class="btn btn-danger"
+                                        data-delete-product="${product.id}"
+                                    >
+                                        🗑 Eliminar
+                                    </button>
 
+                                </div>
 
-                    <div class="productInfo">
+                            </div>
 
-                        <h3>
-                            ${esc(product.name)}
-                        </h3>
+                        `
+                    )
+                    .join("")
+            }
 
-                        <p>
-                            ${esc(
-                                product.description ||
-                                "Sin descripción"
-                            )}
-                        </p>
+        </div>
 
-                        <div class="productMeta">
-
-                            <span>
-                                ${esc(product.category)}
-                            </span>
-
-                            <span>
-                                ${product.duration} min
-                            </span>
-
-                            <strong>
-                                ${money(product.price)}
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="productActions">
-
-                        <button
-                            class="secondaryBtn"
-                            data-edit-product="${product.id}"
-                        >
-                            ✎ Editar
-                        </button>
-
-                        <button
-                            class="dangerBtn"
-                            data-delete-product="${product.id}"
-                        >
-                            🗑 Eliminar
-                        </button>
-
-                    </div>
-
-                </article>
-
-            `)
-            .join("");
+    `;
 
 
     document
@@ -377,21 +686,27 @@ function renderProducts() {
         )
         .forEach(button => {
 
-            button.onclick = () => {
+            button.onclick =
+                () => {
 
-                const product =
-                    products.find(
-                        p =>
-                            String(p.id) ===
-                            String(
-                                button.dataset
-                                    .editProduct
-                            )
+                    const product =
+                        products.find(
+                            item =>
+                                String(
+                                    item.id
+                                ) ===
+                                String(
+                                    button.dataset
+                                        .editProduct
+                                )
+                        );
+
+
+                    showProductEditor(
+                        product
                     );
 
-                openEditor(product);
-
-            };
+                };
 
         });
 
@@ -415,179 +730,203 @@ function renderProducts() {
 
 
 /* =========================================================
-   EDITOR
+   EDITOR DE SERVICIO
 ========================================================= */
 
-function openEditor(product = null) {
+function showProductEditor(
+    product = null
+) {
 
-    const editor =
-        $("#productEditor");
-
-
-    editor.innerHTML = `
-
-        <div class="editorCard">
-
-            <div class="editorHeader">
-
-                <h3>
-                    ${
-                        product
-                            ? "Editar servicio"
-                            : "Nuevo servicio"
-                    }
-                </h3>
-
-                <button
-                    id="closeEditor"
-                    class="closeEditor"
-                >
-                    ×
-                </button>
-
-            </div>
+    const isEditing =
+        Boolean(product);
 
 
-            <div class="formGrid">
-
-                <label>
-                    Nombre
-
-                    <input
-                        id="productName"
-                        value="${esc(
-                            product?.name || ""
-                        )}"
-                        required
-                    >
-                </label>
+    const container =
+        document.createElement(
+            "div"
+        );
 
 
-                <label>
-                    Categoría
-
-                    <input
-                        id="productCategory"
-                        value="${esc(
-                            product?.category ||
-                            "Masajes"
-                        )}"
-                        required
-                    >
-                </label>
+    container.className =
+        "editor";
 
 
-                <label>
-                    Duración en minutos
+    container.innerHTML = `
 
-                    <input
-                        id="productDuration"
-                        type="number"
-                        min="1"
-                        value="${
-                            product?.duration ||
-                            60
-                        }"
-                        required
-                    >
-                </label>
+        <h2>
+            ${
+                isEditing
+                    ? "Editar servicio"
+                    : "Nuevo servicio"
+            }
+        </h2>
 
 
-                <label>
-                    Precio
-
-                    <input
-                        id="productPrice"
-                        type="number"
-                        min="0"
-                        value="${
-                            product?.price ||
-                            0
-                        }"
-                        required
-                    >
-                </label>
-
-            </div>
-
+        <div class="form-grid">
 
             <label>
-                Descripción
 
-                <textarea
-                    id="productDescription"
-                    rows="5"
-                    placeholder="Describe el tratamiento..."
-                >${esc(
-                    product?.description || ""
-                )}</textarea>
-
-            </label>
-
-
-            <label>
-                URL de imagen
+                Nombre del servicio
 
                 <input
-                    id="productImage"
-                    value="${esc(
-                        product?.image_url || ""
-                    )}"
-                    placeholder="https://..."
+                    id="productName"
+                    value="${
+                        esc(
+                            product?.name ||
+                            ""
+                        )
+                    }"
+                    required
                 >
 
             </label>
 
 
-            <div class="editorButtons">
+            <label>
 
-                <button
-                    id="saveProduct"
-                    class="primaryBtn"
+                Categoría
+
+                <input
+                    id="productCategory"
+                    value="${
+                        esc(
+                            product?.category ||
+                            "Masajes"
+                        )
+                    }"
+                    required
                 >
-                    ${
-                        product
-                            ? "Guardar cambios"
-                            : "Crear servicio"
-                    }
-                </button>
 
-                <button
-                    id="cancelEditor"
-                    class="secondaryBtn"
+            </label>
+
+
+            <label>
+
+                Duración en minutos
+
+                <input
+                    id="productDuration"
+                    type="number"
+                    min="15"
+                    step="15"
+                    value="${
+                        product?.duration ||
+                        60
+                    }"
+                    required
                 >
-                    Cancelar
-                </button>
 
-            </div>
+            </label>
+
+
+            <label>
+
+                Precio
+
+                <input
+                    id="productPrice"
+                    type="number"
+                    min="0"
+                    value="${
+                        product?.price ||
+                        0
+                    }"
+                    required
+                >
+
+            </label>
+
+        </div>
+
+
+        <label>
+
+            Descripción del servicio
+
+            <textarea
+                id="productDescription"
+                placeholder="Escribe la descripción completa del tratamiento..."
+            >${
+                esc(
+                    product?.description ||
+                    ""
+                )
+            }</textarea>
+
+        </label>
+
+
+        <label>
+
+            URL de imagen
+
+            <input
+                id="productImage"
+                value="${
+                    esc(
+                        product?.image_url ||
+                        ""
+                    )
+                }"
+                placeholder="https://..."
+            >
+
+        </label>
+
+
+        <label>
+
+            Subir nueva imagen
+
+            <input
+                id="productImageFile"
+                type="file"
+                accept="image/*"
+            >
+
+        </label>
+
+
+        <div class="editor-actions">
+
+            <button
+                class="btn btn-primary"
+                id="saveProduct"
+                type="button"
+            >
+                Guardar servicio
+            </button>
+
+            <button
+                class="btn"
+                id="cancelEditor"
+                type="button"
+            >
+                Cancelar
+            </button>
 
         </div>
 
     `;
 
 
-    $("#closeEditor").onclick =
-        closeEditor;
+    $("#adminContent")
+        .prepend(container);
 
 
-    $("#cancelEditor").onclick =
-        closeEditor;
+    $("#cancelEditor")
+        .onclick =
+        () =>
+            container.remove();
 
 
-    $("#saveProduct").onclick =
-        () => saveProduct(product);
-
-}
-
-
-/* =========================================================
-   CERRAR EDITOR
-========================================================= */
-
-function closeEditor() {
-
-    $("#productEditor")
-        .innerHTML = "";
+    $("#saveProduct")
+        .onclick =
+        () =>
+            saveProduct(
+                product,
+                container
+            );
 
 }
 
@@ -596,98 +935,195 @@ function closeEditor() {
    GUARDAR SERVICIO
 ========================================================= */
 
-async function saveProduct(product) {
+async function saveProduct(
+    oldProduct,
+    editor
+) {
 
-    const body = {
+    const button =
+        $("#saveProduct");
 
-        name:
-            $("#productName")
-                .value
-                .trim(),
 
-        category:
-            $("#productCategory")
-                .value
-                .trim(),
+    button.disabled =
+        true;
 
-        duration:
-            Number(
-                $("#productDuration")
-                    .value
-            ),
+    button.textContent =
+        "Guardando...";
 
-        price:
-            Number(
-                $("#productPrice")
-                    .value
-            ),
 
-        description:
-            $("#productDescription")
-                .value
-                .trim(),
+    try {
 
-        image_url:
+        let imageUrl =
             $("#productImage")
                 .value
-                .trim(),
-
-        active: true
-
-    };
+                .trim();
 
 
-    if (!body.name) {
+        const file =
+            $("#productImageFile")
+                .files[0];
+
+
+        if (file) {
+
+            const path =
+                `${crypto.randomUUID()}-${file.name.replace(
+                    /[^a-zA-Z0-9._-]/g,
+                    ""
+                )}`;
+
+
+            const upload =
+                await db.storage
+                    .from("spa-images")
+                    .upload(
+                        path,
+                        file,
+                        {
+                            upsert:
+                                false
+                        }
+                    );
+
+
+            if (upload.error) {
+
+                throw new Error(
+                    "No se pudo subir la imagen. Verifica que exista el bucket público spa-images."
+                );
+
+            }
+
+
+            imageUrl =
+                db.storage
+                    .from("spa-images")
+                    .getPublicUrl(
+                        path
+                    )
+                    .data
+                    .publicUrl;
+
+        }
+
+
+        const data = {
+
+            name:
+                $("#productName")
+                    .value
+                    .trim(),
+
+            category:
+                $("#productCategory")
+                    .value
+                    .trim(),
+
+            duration:
+                Number(
+                    $("#productDuration")
+                        .value
+                ),
+
+            price:
+                Number(
+                    $("#productPrice")
+                        .value
+                ),
+
+            description:
+                $("#productDescription")
+                    .value
+                    .trim(),
+
+            image_url:
+                imageUrl,
+
+            active:
+                true
+
+        };
+
+
+        if (!data.name) {
+
+            throw new Error(
+                "El nombre del servicio es obligatorio."
+            );
+
+        }
+
+
+        if (!data.description) {
+
+            throw new Error(
+                "La descripción del servicio es obligatoria."
+            );
+
+        }
+
+
+        let response;
+
+
+        if (oldProduct) {
+
+            response =
+                await db
+                    .from("products")
+                    .update(data)
+                    .eq(
+                        "id",
+                        oldProduct.id
+                    );
+
+        } else {
+
+            response =
+                await db
+                    .from("products")
+                    .insert(data);
+
+        }
+
+
+        if (response.error) {
+
+            throw new Error(
+                response.error.message
+            );
+
+        }
+
 
         toast(
-            "Escribe el nombre del servicio"
+            oldProduct
+                ? "Servicio actualizado correctamente."
+                : "Servicio creado correctamente."
         );
 
-        return;
-    }
+
+        await renderAdmin(
+            "products"
+        );
 
 
-    let result;
+    } catch (error) {
 
-
-    if (product) {
-
-        result =
-            await db
-                .from("products")
-                .update(body)
-                .eq("id", product.id);
-
-    } else {
-
-        result =
-            await db
-                .from("products")
-                .insert(body);
-
-    }
-
-
-    if (result.error) {
+        console.error(error);
 
         toast(
-            result.error.message
+            error.message
         );
 
-        return;
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            "Guardar servicio";
+
     }
-
-
-    toast(
-        product
-            ? "Servicio actualizado"
-            : "Servicio creado"
-    );
-
-
-    closeEditor();
-
-    await loadProducts();
 
 }
 
@@ -696,285 +1132,445 @@ async function saveProduct(product) {
    ELIMINAR SERVICIO
 ========================================================= */
 
-async function deleteProduct(id) {
-
-    const product =
-        products.find(
-            p =>
-                String(p.id) ===
-                String(id)
-        );
-
-
-    if (!product) return;
-
+async function deleteProduct(
+    id
+) {
 
     const confirmDelete =
         confirm(
-            `¿Eliminar "${product.name}"?`
+            "¿Seguro que deseas eliminar este servicio?"
         );
 
 
-    if (!confirmDelete)
+    if (!confirmDelete) {
         return;
+    }
 
 
-    const result =
+    const response =
         await db
             .from("products")
             .delete()
-            .eq("id", id);
+            .eq(
+                "id",
+                id
+            );
 
 
-    if (result.error) {
+    if (response.error) {
 
         toast(
-            result.error.message
+            "No se pudo eliminar: " +
+            response.error.message
         );
 
         return;
+
     }
 
 
     toast(
-        "Servicio eliminado"
+        "Servicio eliminado."
     );
 
 
-    await loadProducts();
+    await renderAdmin(
+        "products"
+    );
 
 }
 
 
 /* =========================================================
-   CITAS
+   RESERVAS
 ========================================================= */
 
-async function loadAppointments() {
+function renderReservations() {
 
-    const result =
-        await db
-            .from("appointments")
-            .select(`
-                *,
-                products (
-                    id,
-                    name,
-                    description,
-                    duration,
-                    price
-                )
-            `)
-            .order(
-                "date",
-                {
-                    ascending: true
-                }
-            )
-            .order(
-                "time",
-                {
-                    ascending: true
-                }
-            );
+    if (!reservations.length) {
 
+        $("#adminContent").innerHTML = `
 
-    if (result.error) {
-
-        toast(
-            result.error.message
-        );
-
-        return;
-    }
-
-
-    appointments =
-        result.data || [];
-
-
-    renderAppointments();
-
-    updateStats();
-
-}
-
-
-/* =========================================================
-   RENDER CITAS
-========================================================= */
-
-function renderAppointments() {
-
-    const container =
-        $("#appointmentsList");
-
-
-    if (!appointments.length) {
-
-        container.innerHTML = `
             <div class="empty">
-                No hay citas reservadas.
+
+                <h3>
+                    No hay citas reservadas
+                </h3>
+
+                <p>
+                    Las nuevas reservas aparecerán aquí.
+                </p>
+
             </div>
+
         `;
 
         return;
+
     }
 
 
-    container.innerHTML =
-        appointments
-            .map(a => {
+    $("#adminContent").innerHTML = `
 
-                const product =
-                    a.products || {};
+        <div class="reservations">
 
+            ${
+                reservations
+                    .map(
+                        reservation =>
+                            reservationCard(
+                                reservation
+                            )
+                    )
+                    .join("")
+            }
 
-                return `
+        </div>
 
-                    <article class="appointmentCard">
-
-                        <div class="appointmentMain">
-
-                            <div class="appointmentDate">
-
-                                <strong>
-                                    ${formatDate(a.date)}
-                                </strong>
-
-                                <span>
-                                    ${formatTime(a.time)}
-                                </span>
-
-                            </div>
+    `;
 
 
-                            <div class="appointmentInfo">
+    bindReservationButtons();
 
-                                <h3>
-                                    ${esc(a.name)}
-                                </h3>
-
-                                <p class="serviceName">
-                                    ${esc(
-                                        product.name ||
-                                        "Servicio eliminado"
-                                    )}
-                                </p>
-
-                                <p>
-                                    ${esc(
-                                        product.description ||
-                                        "Sin descripción"
-                                    )}
-                                </p>
+}
 
 
-                                <div class="appointmentMeta">
+/* =========================================================
+   TARJETA DE RESERVA
+========================================================= */
 
-                                    <span>
-                                        📱 ${esc(a.phone)}
-                                    </span>
+function reservationCard(
+    reservation
+) {
 
-                                    <span>
-                                        ⏱ ${
-                                            product.duration ||
-                                            "-"
-                                        } min
-                                    </span>
-
-                                    <span>
-                                        ${
-                                            product.price
-                                                ? money(
-                                                    product.price
-                                                )
-                                                : ""
-                                        }
-                                    </span>
-
-                                </div>
-
-                            </div>
+    const product =
+        reservation.products;
 
 
-                            <div class="statusArea">
-
-                                <span
-                                    class="status ${statusClass(
-                                        a.status
-                                    )}"
-                                >
-                                    ${esc(
-                                        a.status ||
-                                        "pendiente"
-                                    )}
-                                </span>
-
-                            </div>
-
-                        </div>
+    const status =
+        reservation.status ||
+        "pendiente";
 
 
-                        <div class="appointmentActions">
+    const time =
+        String(
+            reservation.time ||
+            ""
+        ).slice(0, 5);
+
+
+    const description =
+        product?.description ||
+        "Sin descripción";
+
+
+    return `
+
+        <article
+            class="reservation-card"
+        >
+
+            <div
+                class="reservation-top"
+            >
+
+                <div>
+
+                    <h3>
+                        ${esc(
+                            reservation.name
+                        )}
+                    </h3>
+
+                    <small>
+                        Cliente
+                    </small>
+
+                </div>
+
+
+                <span
+                    class="status status-${esc(
+                        status
+                    )}"
+                >
+                    ${esc(status)}
+                </span>
+
+            </div>
+
+
+            <div
+                class="reservation-details"
+            >
+
+                <div class="detail">
+
+                    <strong>
+                        SERVICIO
+                    </strong>
+
+                    <span>
+                        ${esc(
+                            product?.name ||
+                            "Servicio"
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="detail">
+
+                    <strong>
+                        FECHA
+                    </strong>
+
+                    <span>
+                        ${esc(
+                            reservation.date
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="detail">
+
+                    <strong>
+                        HORA
+                    </strong>
+
+                    <span>
+                        ${esc(time)}
+                    </span>
+
+                </div>
+
+
+                <div class="detail">
+
+                    <strong>
+                        TELÉFONO
+                    </strong>
+
+                    <span>
+                        ${esc(
+                            reservation.phone
+                        )}
+                    </span>
+
+                </div>
+
+
+                <div class="detail">
+
+                    <strong>
+                        DURACIÓN
+                    </strong>
+
+                    <span>
+                        ${
+                            product?.duration ||
+                            "-"
+                        }
+                        minutos
+                    </span>
+
+                </div>
+
+
+                <div class="detail">
+
+                    <strong>
+                        PRECIO
+                    </strong>
+
+                    <span>
+                        ${money(
+                            product?.price
+                        )}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="reservation-description"
+            >
+
+                <strong>
+                    Descripción:
+                </strong>
+
+                <br>
+
+                ${esc(
+                    description
+                )}
+
+                ${
+                    reservation.notes
+                        ? `
+                            <br><br>
+
+                            <strong>
+                                Notas del cliente:
+                            </strong>
+
+                            <br>
+
+                            ${esc(
+                                reservation.notes
+                            )}
+                        `
+                        : ""
+                }
+
+            </div>
+
+
+            <div
+                class="reservation-actions"
+            >
+
+                <button
+                    class="btn btn-whatsapp"
+                    data-whatsapp="${reservation.id}"
+                    type="button"
+                >
+                    💬 WhatsApp
+                </button>
+
+
+                ${
+                    status ===
+                    "pendiente"
+                        ? `
 
                             <button
-                                class="whatsappBtn"
-                                data-whatsapp="${a.id}"
+                                class="btn btn-success"
+                                data-confirm="${reservation.id}"
+                                type="button"
                             >
-                                💬 WhatsApp
+                                ✓ Confirmar
                             </button>
 
+                            <button
+                                class="btn btn-danger"
+                                data-cancel="${reservation.id}"
+                                type="button"
+                            >
+                                × Cancelar
+                            </button>
 
-                            ${
-                                a.status ===
-                                "pendiente"
-                                    ? `
-                                        <button
-                                            class="confirmBtn"
-                                            data-confirm="${a.id}"
-                                        >
-                                            ✓ Confirmar
-                                        </button>
-
-                                        <button
-                                            class="cancelBtn"
-                                            data-cancel="${a.id}"
-                                        >
-                                            × Cancelar
-                                        </button>
-                                    `
-                                    : ""
-                            }
+                        `
+                        : ""
+                }
 
 
-                            ${
-                                a.status ===
-                                "confirmada"
-                                    ? `
-                                        <button
-                                            class="dangerBtn"
-                                            data-delete-appointment="${a.id}"
-                                        >
-                                            🗑 Eliminar cita
-                                        </button>
-                                    `
-                                    : ""
-                            }
+                ${
+                    status ===
+                    "confirmada"
+                        ? `
 
-                        </div>
+                            <button
+                                class="btn btn-danger"
+                                data-delete-reservation="${reservation.id}"
+                                type="button"
+                            >
+                                🗑 Eliminar cita
+                            </button>
 
-                    </article>
-
-                `;
-
-            })
-            .join("");
+                        `
+                        : ""
+                }
 
 
-    /*
-     * WhatsApp
-     */
+                ${
+                    status ===
+                    "cancelada"
+                        ? `
+
+                            <button
+                                class="btn btn-danger"
+                                data-delete-reservation="${reservation.id}"
+                                type="button"
+                            >
+                                🗑 Eliminar
+                            </button>
+
+                        `
+                        : ""
+                }
+
+            </div>
+
+        </article>
+
+    `;
+
+}
+
+
+/* =========================================================
+   BOTONES DE RESERVAS
+========================================================= */
+
+function bindReservationButtons() {
+
+
+    document
+        .querySelectorAll(
+            "[data-confirm]"
+        )
+        .forEach(button => {
+
+            button.onclick =
+                () =>
+                    updateReservationStatus(
+                        button.dataset
+                            .confirm,
+                        "confirmada"
+                    );
+
+        });
+
+
+    document
+        .querySelectorAll(
+            "[data-cancel]"
+        )
+        .forEach(button => {
+
+            button.onclick =
+                () =>
+                    updateReservationStatus(
+                        button.dataset
+                            .cancel,
+                        "cancelada"
+                    );
+
+        });
+
+
+    document
+        .querySelectorAll(
+            "[data-delete-reservation]"
+        )
+        .forEach(button => {
+
+            button.onclick =
+                () =>
+                    deleteReservation(
+                        button.dataset
+                            .deleteReservation
+                    );
+
+        });
+
 
     document
         .querySelectorAll(
@@ -991,107 +1587,51 @@ function renderAppointments() {
 
         });
 
-
-    /*
-     * Confirmar
-     */
-
-    document
-        .querySelectorAll(
-            "[data-confirm]"
-        )
-        .forEach(button => {
-
-            button.onclick =
-                () =>
-                    updateAppointment(
-                        button.dataset
-                            .confirm,
-                        "confirmada"
-                    );
-
-        });
-
-
-    /*
-     * Cancelar
-     */
-
-    document
-        .querySelectorAll(
-            "[data-cancel]"
-        )
-        .forEach(button => {
-
-            button.onclick =
-                () =>
-                    updateAppointment(
-                        button.dataset
-                            .cancel,
-                        "cancelada"
-                    );
-
-        });
-
-
-    /*
-     * Eliminar confirmada
-     */
-
-    document
-        .querySelectorAll(
-            "[data-delete-appointment]"
-        )
-        .forEach(button => {
-
-            button.onclick =
-                () =>
-                    deleteAppointment(
-                        button.dataset
-                            .deleteAppointment
-                    );
-
-        });
-
 }
 
 
 /* =========================================================
-   ACTUALIZAR CITA
+   CAMBIAR ESTADO
 ========================================================= */
 
-async function updateAppointment(
+async function updateReservationStatus(
     id,
-    newStatus
+    status
 ) {
 
-    const result =
+    const response =
         await db
             .from("appointments")
             .update({
-                status: newStatus
+                status
             })
-            .eq("id", id);
+            .eq(
+                "id",
+                id
+            );
 
 
-    if (result.error) {
+    if (response.error) {
 
         toast(
-            result.error.message
+            response.error.message
         );
 
         return;
+
     }
 
 
     toast(
-        newStatus === "confirmada"
-            ? "Cita confirmada"
-            : "Cita cancelada"
+        status === "confirmada"
+            ? "Cita confirmada."
+            : "Cita cancelada."
     );
 
 
-    await loadAppointments();
+    await renderAdmin(
+        "reservations"
+    );
 
 }
 
@@ -1100,66 +1640,64 @@ async function updateAppointment(
    ELIMINAR CITA
 ========================================================= */
 
-async function deleteAppointment(id) {
+async function deleteReservation(
+    id
+) {
 
-    const appointment =
-        appointments.find(
-            a =>
-                String(a.id) ===
+    const reservation =
+        reservations.find(
+            item =>
+                String(item.id) ===
                 String(id)
         );
 
 
-    if (!appointment)
-        return;
-
-
-    if (
-        appointment.status !==
-        "confirmada"
-    ) {
-
-        toast(
-            "Solo se pueden eliminar citas confirmadas"
-        );
-
+    if (!reservation) {
         return;
     }
 
 
-    const accepted =
+    const confirmed =
         confirm(
-            `¿Eliminar definitivamente la cita de ${appointment.name}?`
+            `¿Eliminar definitivamente la cita de ${reservation.name}?`
         );
 
 
-    if (!accepted)
+    if (!confirmed) {
         return;
+    }
 
 
-    const result =
+    const response =
         await db
             .from("appointments")
             .delete()
-            .eq("id", id);
+            .eq(
+                "id",
+                id
+            );
 
 
-    if (result.error) {
+    if (response.error) {
 
         toast(
-            result.error.message
+            "No se pudo eliminar la cita: " +
+            response.error.message
         );
 
         return;
+
     }
 
 
     toast(
-        "Cita eliminada"
+        "Cita eliminada correctamente."
     );
 
 
-    await loadAppointments();
+    await renderAdmin(
+        "reservations"
+    );
 
 }
 
@@ -1168,46 +1706,45 @@ async function deleteAppointment(id) {
    WHATSAPP
 ========================================================= */
 
-function sendWhatsApp(id) {
+function sendWhatsApp(
+    reservationId
+) {
 
-    const appointment =
-        appointments.find(
-            a =>
-                String(a.id) ===
-                String(id)
+    const reservation =
+        reservations.find(
+            item =>
+                String(item.id) ===
+                String(reservationId)
         );
 
 
-    if (!appointment) {
+    if (!reservation) {
 
         toast(
-            "No se encontró la cita"
+            "No se encontró la reserva."
         );
 
         return;
+
     }
 
 
-    const product =
-        appointment.products || {};
+    let phone =
+        String(
+            reservation.phone ||
+            ""
+        )
+        .replace(
+            /\D/g,
+            ""
+        );
 
 
     /*
-     * Normalizar teléfono
-     *
-     * Si el cliente escribe:
-     * 3111234567
-     *
-     * se convierte en:
-     * 573111234567
+     * Convertir celulares colombianos
+     * 3XXXXXXXXX
+     * a 573XXXXXXXXX
      */
-
-    let phone =
-        String(
-            appointment.phone || ""
-        )
-        .replace(/\D/g, "");
-
 
     if (
         phone.length === 10 &&
@@ -1215,7 +1752,7 @@ function sendWhatsApp(id) {
     ) {
 
         phone =
-            "57" + phone;
+            `57${phone}`;
 
     }
 
@@ -1223,29 +1760,51 @@ function sendWhatsApp(id) {
     if (!phone) {
 
         toast(
-            "La cita no tiene teléfono"
+            "La reserva no tiene un número de teléfono válido."
         );
 
         return;
+
     }
 
 
-    const message = `Hola ${appointment.name}, te escribimos de Serenity Spa 🌿
+    const product =
+        reservation.products;
 
-Queremos confirmar tu cita:
 
-✨ Servicio: ${product.name || "Servicio"}
-📝 Descripción: ${product.description || "Sin descripción"}
-📅 Fecha: ${formatDate(appointment.date)}
-🕐 Hora: ${formatTime(appointment.time)}
-⏱ Duración: ${product.duration || "-"} minutos
-💰 Valor: ${product.price ? money(product.price) : "-"}
+    const time =
+        String(
+            reservation.time ||
+            ""
+        ).slice(0, 5);
 
-Por favor confírmanos si puedes asistir en este horario.
 
-Si necesitas cambiar la fecha o la hora, escríbenos para buscarte otro espacio disponible.
+    const message = `Hola ${reservation.name}, te contactamos de Danu SPA 🌿
 
-¡Gracias por elegir Serenity Spa! 🌿`;
+Queremos confirmar tu reserva:
+
+✨ Servicio: ${product?.name || "Servicio"}
+📅 Fecha: ${reservation.date}
+🕐 Hora: ${time}
+⏱ Duración: ${product?.duration || "-"} minutos
+💰 Valor: ${money(product?.price)}
+
+Descripción:
+${product?.description || "Sin descripción"}
+
+${
+    reservation.notes
+        ? `Notas:
+${reservation.notes}
+
+`
+        : ""
+}
+¿Podemos confirmar tu cita en este horario?
+
+Si necesitas cambiar la fecha u hora, puedes informarnos por este medio.
+
+¡Gracias por elegir Danu SPA! 💚`;
 
 
     const url =
@@ -1263,193 +1822,37 @@ Si necesitas cambiar la fecha o la hora, escríbenos para buscarte otro espacio 
 
 
 /* =========================================================
-   FORMATO FECHA
-========================================================= */
-
-function formatDate(date) {
-
-    if (!date)
-        return "-";
-
-
-    const parts =
-        String(date)
-            .split("-");
-
-
-    if (parts.length !== 3)
-        return date;
-
-
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-
-}
-
-
-/* =========================================================
-   FORMATO HORA
-========================================================= */
-
-function formatTime(time) {
-
-    return String(
-        time || ""
-    ).slice(0, 5);
-
-}
-
-
-/* =========================================================
-   ESTADO
-========================================================= */
-
-function statusClass(status) {
-
-    if (
-        status ===
-        "confirmada"
-    )
-        return "confirmed";
-
-
-    if (
-        status ===
-        "cancelada"
-    )
-        return "cancelled";
-
-
-    return "pending";
-
-}
-
-
-/* =========================================================
-   ESTADÍSTICAS
-========================================================= */
-
-function updateStats() {
-
-    if ($("#statProducts"))
-        $("#statProducts")
-            .textContent =
-            products.length;
-
-
-    if ($("#statPending"))
-        $("#statPending")
-            .textContent =
-            appointments.filter(
-                a =>
-                    a.status ===
-                    "pendiente"
-            ).length;
-
-
-    if ($("#statConfirmed"))
-        $("#statConfirmed")
-            .textContent =
-            appointments.filter(
-                a =>
-                    a.status ===
-                    "confirmada"
-            ).length;
-
-}
-
-
-/* =========================================================
-   CAMBIAR PESTAÑA
-========================================================= */
-
-function showTab(tab) {
-
-    if (
-        tab ===
-        "products"
-    ) {
-
-        $("#productsSection")
-            .classList.remove(
-                "hidden"
-            );
-
-        $("#appointmentsSection")
-            .classList.add(
-                "hidden"
-            );
-
-        $("#productsTab")
-            .classList.add(
-                "active"
-            );
-
-        $("#appointmentsTab")
-            .classList.remove(
-                "active"
-            );
-
-    } else {
-
-        $("#productsSection")
-            .classList.add(
-                "hidden"
-            );
-
-        $("#appointmentsSection")
-            .classList.remove(
-                "hidden"
-            );
-
-        $("#productsTab")
-            .classList.remove(
-                "active"
-            );
-
-        $("#appointmentsTab")
-            .classList.add(
-                "active"
-            );
-
-        loadAppointments();
-
-    }
-
-}
-
-
-/* =========================================================
    TOAST
 ========================================================= */
 
-function toast(message) {
+function toast(
+    message
+) {
 
     const element =
-        $("#toast");
+        document.createElement(
+            "div"
+        );
+
+
+    element.className =
+        "toast";
 
 
     element.textContent =
         message;
 
 
-    element.classList.remove(
-        "hidden"
+    document.body.appendChild(
+        element
     );
 
 
-    clearTimeout(
-        window.toastTimer
+    setTimeout(
+        () =>
+            element.remove(),
+        4000
     );
-
-
-    window.toastTimer =
-        setTimeout(
-            () =>
-                element.classList.add(
-                    "hidden"
-                ),
-            3500
-        );
 
 }
 
