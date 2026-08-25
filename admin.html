@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Administración · Serenity Spa</title>
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+</head>
+
+
+<body class="admin-page">
+
+
+<header>
+
+    <a
+        class="brand"
+        href="index.html"
+    >
+        ✦ Serenity <i>Spa</i>
+    </a>
+
+
+    <nav>
+
+        <a href="index.html">
+            Ver página
+        </a>
+
+        <button
+            id="logout"
+            type="button"
+        >
+            Cerrar sesión
+        </button>
+
+    </nav>
+
+</header>
+
+
+<main class="admin-main">
+
+    <!-- ==========================================
+         LOGIN
+    =========================================== -->
+
+    <section
+        id="loginSection"
+        class="admin-login"
+    >
+
+        <small>
+            ÁREA PRIVADA
+        </small>
+
+        <h1>
+            Administración
+        </h1>
+
+        <p>
+            Ingresa para administrar los servicios
+            y las reservas de Serenity Spa.
+        </p>
+
+
+        <form id="loginForm">
+
+            <label>
+
+                Correo
+
+                <input
+                    id="email"
+                    type="email"
+                    required
+                    autocomplete="username"
+                >
+
+            </label>
+
+
+            <label>
+
+                Contraseña
+
+                <input
+                    id="password"
+                    type="password"
+                    required
+                    autocomplete="current-password"
+                >
+
+            </label>
+
+
+            <button
+                class="btn primary full"
+                type="submit"
+            >
+                Ingresar
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <!-- ==========================================
+         PANEL
+    =========================================== -->
+
+    <section
+        id="dashboard"
+        class="dashboard hidden"
+    >
+
+        <div class="dashboard-header">
+
+            <div>
+
+                <small>
+                    PANEL DE CONTROL
+                </small>
+
+                <h1>
+                    Administración
+                </h1>
+
+            </div>
+
+
+            <a
+                href="index.html"
+                class="btn"
+            >
+                ← Página principal
+            </a>
+
+        </div>
+
+
+        <!-- ======================================
+             ESTADÍSTICAS
+        ======================================= -->
+
+        <div
+            id="stats"
+            class="stats"
+        ></div>
+
+
+        <!-- ======================================
+             TABS
+        ======================================= -->
+
+        <div class="admin-tabs">
+
+            <button
+                class="admin-tab active"
+                data-tab="reservas"
+                type="button"
+            >
+                📅 Reservas
+            </button>
+
+
+            <button
+                class="admin-tab"
+                data-tab="servicios"
+                type="button"
+            >
+                ✦ Servicios
+            </button>
+
+        </div>
+
+
+        <!-- ======================================
+             RESERVAS
+        ======================================= -->
+
+        <section
+            id="reservasPanel"
+            class="admin-panel"
+        >
+
+            <div class="panel-heading">
+
+                <div>
+
+                    <h2>
+                        Citas reservadas
+                    </h2>
+
+                    <p>
+                        Gestiona, confirma o contacta
+                        a tus clientes.
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="refreshReservations"
+                    class="btn"
+                    type="button"
+                >
+                    ↻ Actualizar
+                </button>
+
+            </div>
+
+
+            <div
+                id="reservationsList"
+                class="reservations-list"
+            ></div>
+
+        </section>
+
+
+        <!-- ======================================
+             SERVICIOS
+        ======================================= -->
+
+        <section
+            id="serviciosPanel"
+            class="admin-panel hidden"
+        >
+
+            <div class="panel-heading">
+
+                <div>
+
+                    <h2>
+                        Servicios
+                    </h2>
+
+                    <p>
+                        Administra los tratamientos
+                        disponibles.
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="newService"
+                    class="btn primary"
+                    type="button"
+                >
+                    + Nuevo servicio
+                </button>
+
+            </div>
+
+
+            <div
+                id="servicesList"
+                class="services-list"
+            ></div>
+
+        </section>
+
+    </section>
+
+</main>
+
+
+<div
+    id="toastContainer"
+></div>
+
+
+<script src="config.js"></script>
+<script src="admin.js"></script>
+
+</body>
+
+</html>

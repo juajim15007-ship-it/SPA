@@ -341,7 +341,9 @@ function bind() {
     /*
      * Abrir administrador
      */
-    $("#adminOpen").onclick = openAdmin;
+    $("#adminOpen").onclick = () => {
+        window.location.href = "admin.html";
+    };
 
 
     /*
