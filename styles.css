@@ -436,19 +436,31 @@ small {
 
 
 .card {
+    position: relative;
 
-    border:
-        1px solid var(--line);
+    border: 1px solid var(--line);
+    border-radius: 18px;
 
-    border-radius:
-        18px;
+    overflow: hidden;
 
-    overflow:
-        hidden;
+    background: white;
 
-    background:
-        white;
+    transition:
+        transform 0.35s ease,
+        box-shadow 0.35s ease,
+        border-color 0.35s ease;
 
+    cursor: pointer;
+}
+
+/* Efecto al pasar el cursor */
+.card:hover {
+    transform: translateY(-12px);
+
+    box-shadow:
+        0 20px 40px rgba(36, 50, 45, 0.16);
+
+    border-color: #cbd6ca;
 }
 
 
@@ -456,15 +468,28 @@ small {
     width: 100%;
     height: 230px;
 
-    background-color: #eef2eb;
-
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-
-    border-bottom: 1px solid var(--line);
+    background: #eef2eb;
 
     overflow: hidden;
+
+    position: relative;
+}
+
+.pic img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+    object-position: center;
+
+    transition: transform 0.6s ease;
+}
+
+/* Zoom de la imagen */
+.card:hover .pic img {
+    transform: scale(1.08);
 }
 
 .body {
@@ -1164,4 +1189,25 @@ footer {
 
     }
 
+}
+
+/* =========================================================
+   EFECTO HOVER DE LOS SERVICIOS
+========================================================= */
+.card {
+    cursor: pointer;
+    position: relative;
+    transition:
+        transform 0.35s ease,
+        box-shadow 0.35s ease;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(36, 50, 45, 0.16);
+}
+
+.click-hint {
+    color: var(--deep);
+    font-weight: bold;
 }
