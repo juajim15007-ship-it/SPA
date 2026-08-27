@@ -458,8 +458,8 @@ small {
 
     background-color: #eef2eb;
 
-    background-size: cover;
-    background-position: center center;
+    background-size: contain;
+    background-position: center;
     background-repeat: no-repeat;
 
     border-bottom: 1px solid var(--line);
