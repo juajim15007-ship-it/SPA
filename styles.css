@@ -453,25 +453,19 @@ small {
 
 
 .pic {
+    width: 100%;
+    height: 230px;
 
-    height:
-        170px;
+    background-color: #eef2eb;
 
-    background:
-        linear-gradient(
-            135deg,
-            #d9e0d4,
-            #a8bba8
-        );
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
 
-    background-size:
-        cover;
+    border-bottom: 1px solid var(--line);
 
-    background-position:
-        center;
-
+    overflow: hidden;
 }
-
 
 .body {
     padding: 20px;
