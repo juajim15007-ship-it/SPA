@@ -401,18 +401,29 @@ function renderProducts() {
         list
             .map(product => `
 
-                <article class="card">
+                <article
+                    class="card"
+                    data-description="${esc(product.description)}"
+                >
 
-                    <div
-                        class="pic"
+                    <div class="pic">
+
                         ${
                             product.image_url
-                                ? `style="background-image:url('${esc(
-                                    product.image_url
-                                )}')"`
-                                : ""
+                                ? `
+                                    <img
+                                        src="${esc(product.image_url)}"
+                                        alt="${esc(product.name)}"
+                                    >
+                                `
+                                : `
+                                    <div class="no-image">
+                                        Danu SPA
+                                    </div>
+                                `
                         }
-                    ></div>
+
+                    </div>
 
                     <div class="body">
 
